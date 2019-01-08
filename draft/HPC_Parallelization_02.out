@@ -1,0 +1,17 @@
+\BOOKMARK [1][-]{section.1}{Introduction}{}% 1
+\BOOKMARK [1][-]{section.2}{Parallel Computing in HPC}{}% 2
+\BOOKMARK [2][-]{subsection.2.1}{Parallel Computing Environment}{section.2}% 3
+\BOOKMARK [2][-]{subsection.2.2}{Profiling Solution Methods:}{section.2}% 4
+\BOOKMARK [2][-]{subsection.2.3}{Scalability and Granularity}{section.2}% 5
+\BOOKMARK [1][-]{section.3}{Parallelization Overhead}{}% 6
+\BOOKMARK [2][-]{subsection.3.1}{Defining Parallelization Overhead}{section.3}% 7
+\BOOKMARK [2][-]{subsection.3.2}{Parallelization Overhead in Shared-Memory Programming}{section.3}% 8
+\BOOKMARK [1][-]{section.4}{HPC-Efficient Algorithms}{}% 9
+\BOOKMARK [2][-]{subsection.4.1}{Passing an Object or Variables?}{section.4}% 10
+\BOOKMARK [2][-]{subsection.4.2}{The Right Granularity for the Number of Cores}{section.4}% 11
+\BOOKMARK [2][-]{subsection.4.3}{The Right Chunk of Tasks}{section.4}% 12
+\BOOKMARK [1][-]{section.5}{Conclusion}{}% 13
+\BOOKMARK [1][-]{section.6}{Bibliography}{}% 14
+\BOOKMARK [1][-]{section.7}{Appendix}{}% 15
+\BOOKMARK [2][-]{subsection.7.1}{Parallelization Overhead on GPUs}{section.7}% 16
+\BOOKMARK [2][-]{subsection.7.2}{Overhead on Distributed Memory Parallelization}{section.7}% 17

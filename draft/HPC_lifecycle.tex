@@ -1,0 +1,611 @@
+\documentclass[12pt]{article}
+
+\usepackage[showlabels,sections,floats,textmath,displaymath]{preview}
+%\usepackage[pdftex]{graphicx}
+
+\usepackage[dvipsnames]{xcolor}
+%\usepackage[]{trackchanges}
+\usepackage{pdflscape}
+%\usepackage{natbib}
+\usepackage[comma,authoryear]{natbib}
+\usepackage{amstext,amsthm,amssymb}
+\usepackage[bf,sf,compact,topmarks,small]{titlesec}
+\usepackage[fleqn]{amsmath}
+\usepackage{rotating}
+%\usepackage{subfigure}
+\usepackage{natbib}
+\usepackage{geometry,setspace}
+\usepackage{url}
+\usepackage{hyperref}
+\usepackage{mathrsfs}
+\hypersetup{
+    colorlinks=true,
+    citecolor=blue,%
+    filecolor=black,%
+    linkcolor=black,%
+    urlcolor=blue
+}
+\usepackage{appendix}
+\usepackage{multirow}
+\usepackage{comment}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subfig}
+\usepackage{tabularx}
+\usepackage[normalem]{ulem}
+\usepackage[affil-it]{authblk}
+
+\definecolor{orange}{rgb}{1,0.5,0}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{algorithm}[theorem]{Algorithm}
+\newtheorem{result}[theorem]{Result}
+\setlength{\oddsidemargin}{0in} \setlength{\evensidemargin}{0in}
+\setlength{\hoffset}{0in} \setlength{\voffset}{0.25in}
+\setlength{\textwidth}{6.5in} \setlength{\textheight}{9.in}
+\setlength{\marginparwidth}{0.5in} \setlength{\topmargin}{-.35in}
+\setlength{\headheight}{0in} \setlength{\headsep}{0in}
+
+\def\baselinestretch{1.}
+\parskip=0.3cm
+
+\csname toclevel@#2\endcsname
+
+%\renewcommand{\initialsOne}{di}
+%\renewcommand{\initialsTwo}{kk}
+%\renewcommand{\initialsThree}{rs}
+
+
+\begin{document}
+\sf
+
+\pagenumbering{roman}
+\title{\textbf{Parallelization Overhead and HPC-Efficient Algorithm}}
+\author{Dongya Koh\thanks{\href{mailto:dkoh@walton.uark.edu}{dkoh@walton.uark.edu}; \url{https://sites.google.com/site/dongyakoh/}}}
+\affil{University of Arkansas}
+\maketitle
+
+
+\begin{abstract}
+An advent of high-performance computing (HPC) system enables parallel computing more handy and ubiquitous in numerically solving economic models. In fact, despite the introduction of efficient solution methods and the use of efficient programming languages, parallel computing has yet been the last resort for time-consuming complex models to be solved. Nevertheless, it is surprising that very little is known about the full gain of modern computing power via parallel computing. This study therefore shows under what conditions we gain a full benefit from solving an economic model using parallel computing in a HPC system. In particular, we show the source of bottlenecks inherent to the parallel computing in HPC architectures and introduce easily-implementable HPC-efficient algorithms to get around with the overhead.
+\end{abstract}
+
+
+\newpage
+\section{Introduction}
+
+A lifecycle income profile is non-stationary. Hence the state space in old age should be a super set of that in young age. If one chooses the largest state space for all age, then there are some points that young age never reach. On the other hand, if one uses age-dependent state space with uniform grid size for all age, then a wider state space should have coarse grid points.
+
+\begin{itemize}
+\item HPC environment: AMD cluster, Intel cluster, GPU, shared memory, distributed memory
+\item High language and low language: Python, C++
+\item Profiling memory usage, Memory architecture, batch size, pre-dispatch
+\end{itemize}
+
+
+\clearpage
+\section{Profiling Solution Methods}
+VFI as an example: VFI compute a value function over a hyper-cube state space using optimization routine and interpolation. Most of the alternative solution methods compute value and polity functions over a hyper-cube state space and a certain degree of optimization and interpolation. Therefore, profiling VFI applies to all other solution methods. 
+\begin{itemize}
+\item How many seconds each code takes?
+\item Access to memory, CPU use?
+\item Where to parallelize?
+\item how to parallelize?
+\end{itemize}
+
+
+
+\subsubsection*{Model: Consumption/Saving}
+The baseline model assumes that an individual lives until age $T$, the individual's problem is to choose an amount of saving and consumption:
+\begin{align*}
+V_t(a_{t},e_t) = \max_{c_t,a_{t+1}} u(c_{t}) + \beta \mathbb{E}_t V_{t+1}(a_{t+1},e_{t+1})
+\end{align*}
+subject to
+\begin{align*}
+c_t + a_{t+1} 	&= w e_t + (1+r)a_t \\
+a_{t+1} 		&\geq \underline{a}\\
+e_{t+1} 		&\sim P(e_{t+1}|e_t).
+\end{align*}
+The utility function takes isoelastic preference, $u(c) = \frac{c^{1-\sigma}}{1-\sigma}$
+
+
+
+\subsubsection*{Solution Method: Value Function Iteration}
+
+\begin{table}[h!]
+\begin{tabular}{p{7cm} | p{7cm}}
+\hline
+\\[-1.0em]
+Low Dimension & High Dimension\\
+\\[-1.0em]
+\hline
+\\[-0.7em]
+Value function iteration (VFI) & Smolyak sparse grid method\\
+& \hspace{0.1em} \textcolor{gray}{{\footnotesize (Krueger \& Kubler, 2004, etc.)}} \\
+Policy function iteration (PFI) & Adaptive grid method \\
+& \hspace{0.1em} \textcolor{gray}{{\footnotesize (Brumm \& Scheidegger, 2017)}} \\
+Projection method & Stochastic simulation algorithm \\
+ \hspace{0.1em} \textcolor{gray}{{\footnotesize (Judd, 1992, etc.)}} & \hspace{0.1em} \textcolor{gray}{{\footnotesize (Den Haan \& Marcet, 1990, etc.)}} \\
+Endogenous grid method (EGM) & $\varepsilon$-distinguishable set method \\
+\hspace{0.1em} \textcolor{gray}{{\footnotesize (Carroll, 2005, etc.)}} & \hspace{0.1em} \textcolor{gray}{{\footnotesize (Judd, Maliar, Maliar, 2015)}} \\
+Envelope condition method & Cluster grid method \\
+\hspace{0.1em} \textcolor{gray}{{\footnotesize (Maliar \& Maliar, 2013)}} & \hspace{0.1em} \textcolor{gray}{{\footnotesize (Judd, Maliar, Maliar, 2015)}} \\
+Precomputation method & Perturbation method \\
+\hspace{0.1em} \textcolor{gray}{{\footnotesize (Judd, Maliar, Maliar, \& Tsener, 2017)}} & \hspace{0.1em} \textcolor{gray}{{\footnotesize (Judd \& Guu, 1993, etc.)}}\\
+[-0.7em]\\\hline
+\end{tabular}
+\end{table}
+
+
+
+
+\begin{table}
+\caption{VFI Algorithm and Percent of Total Runtime}
+\smallskip
+\small
+\begin{tabular}{p{1.3cm}p{0.1cm}p{11.5cm}r}
+\multicolumn{2}{l}{\textbf{Procedure}}& \textbf{Algorithm} & \textbf{\% of Time}\\
+\hline
+Step 1. &&Initialization & 0.0538\\
+\hline
+\\[-0.7em]
+		&a.&  Set model parameters. & 0.0002\\
+		&b.&  Construct grid points for $a_{t} \in \mathcal{A}$. & 0.0001\\
+		&c.&  Construct grid points for $e_t \in \mathcal{E}$ with a transition matrix $P(e_{t+1}|e_t)$.&0.0535\\
+\\[-0.8em]\hline
+Step 2. &&Computing a household problem at $t=T$ & 0.0224\\
+\hline
+\\[-0.7em]
+		&&  For each state $(a_T, e_T)\in \mathcal{A} \otimes \mathcal{E}$, $a_{T+1}=0$, and compute\\
+[-0.9em]
+&&\parbox{4cm}{
+\begin{align}
+&c_T = w e_T + (1+r) a_T \notag\\
+&V_{T}(a_T,e_T) = u(c_T)\notag
+\end{align}}\\
+\\[-1.7em]\hline
+Step 3. && Computing a household problem at $t<T$ & 99.7448\\
+\hline
+\\[-0.7em]
+		&&  For each state $(a_{t},e_{t})\in \mathcal{A} \otimes \mathcal{E}$, search for a maximizer $a_{t+1}$ that maximizes\\
+[-0.9em]
+&&\parbox{4cm}{
+\begin{align}
+W_t(a_{t},e_t,a_{t+1}) = u(w e_t + (1+r)a_t - a_{t+1}) + \beta \mathbb{E}_t V_{t+1}(a_{t+1},e_{t+1}) \notag
+\end{align}} \\
+[-0.5em]
+&& using a bounded minimization routine.\footnote{This part can take an alternative brute force computation of value function without using interpolation and bounded minimization. In particular, for each state $(a_t,e_t)$, bellman equation can be evaluated at each point $a_{t+1}\in\mathcal{A}$, and then choose a value $a^*_{t+1}$that maximize the bellman equation. This brute force method evaluate bellman equation at each point in $\mathcal{A}$, and therefore, it takes more computational time when the number of grid points in $\mathcal{A}$ increases.} Each search process at a given state $(a_{t},e_{t})$ takes the following sub-procedures:\\
+		&a.& For each $a_{t+1}$ at a given state $(a_t,e_t)$, interpolate an expected continuation value $\mathbb{E}_t V_{t+1}(a_{t+1},e_{t+1})$. & 96.5097\\
+		&b.& For each $a_{t+1}$ at a given state $(a_t,e_t)$, compute $W_t(a_{t},e_t,a_{t+1})$. &3.2351\\
+\hline
+\end{tabular}
+\end{table}
+
+
+
+
+\clearpage
+\section{Computing Parallelization Overheads}
+\begin{itemize}
+\item The total runtime of a program with $n$ cores:
+\begin{align*}
+T(n) = \frac{T_p}{n} + T_s + P(n)
+\end{align*}
+\item The optimal number of cores to minimize the runtime:
+\begin{align*}
+P'(n^*) = \frac{T_p}{n^{*2}} 
+\end{align*}
+\item If the parallelization overhead is approximated as $P(n)=pn^\alpha \quad (p,\alpha>0)$:
+\begin{align*}
+n^* = \left(\frac{T_p}{\alpha p} \right)^{1+\alpha}
+\end{align*}
+\item Sources of parallelization overhead:
+\begin{enumerate}
+\item Communication overhead in the form of synchronization and data communications
+\item Idling due to load imbalances
+\end{enumerate}
+\item Overheads vary by the implemented parallel algorithms and problems to be solved 
+\item Parallelization overhead with $n$ cores can be calculated as
+\begin{align*}
+P(n) = (T(n)-T_s) - \frac{T_p}{n},
+\end{align*}
+provided that $P(1)=0$
+\end{itemize}
+
+
+
+\begin{itemize}
+\item Profile parallelization overhead in HPC, GPU, cloud computing (communication overhead, idling, memory use etc.)
+\item Estimate the parallelization overhead and compute the optimal number of cores, showing it in the graphs.
+\item What are the conditions under which a large number of cores are not needed? language, solution methods, etc.
+\end{itemize}
+
+\begin{itemize}
+\item Figure1. Runtime by cores with parallelization overhead and optimal number of cores
+\item Figure2. 3D graph of parallelization overhead to show the changes in concavity of P(n) to Tp.
+\end{itemize}
+
+When the convexity of $P(n)$ increases, $n^*$ decreases. When the concavity of $P(n)$ increases,
+$n^*$ increases. When $P(n)$ is not increasing fast by $n$, then $n^*$ will be higher. When $P(n)$ is increasing fast, Then $T(n)$ will be convex and will start rising after certain $n$.
+
+
+\clearpage
+\section{HPC-Efficient Algorithms}
+How much we gain from using multiple cores
+\paragraph{Task scheduling:}
+\paragraph{Reduction:}
+\paragraph{Memory use:}
+
+
+
+
+
+\begin{table}[h!]
+\begin{tabular}{p{2cm} | p{5cm} | p{3cm}}
+\hline
+Language & Type & Rel. Exec. Time\\[0.1em]
+\hline \hline
+&&\\[-0.8em]
+C/C++ 	& low-level, fastest with gcc & 1.00 \\[0.2em]
+Fortran & low-level  & 1.05 \\[0.2em] 
+\hline
+&&\\[-0.8em]
+Python 	& high-level, open-source, growing in popularity & 44$\times$ $\sim$ 270$\times$ \\[0.2em]
+Julia 	& high-level, new open-source & 2.64$\times$ $\sim$ 2.70$\times$ \\[0.2em]
+R & high-level, open-source & 281$\times$ $\sim$ 475$\times$ \\[0.2em]
+Matlab & high-level, not free, license issue & 9$\times$ $\sim$ 11$\times$ \\[0.2em]
+Mathematica & high-level & 809$\times$ \\[0.2em]
+\hline
+\end{tabular}
+\end{table}
+\vspace{-0.8em}
+\hspace{1em}\scriptsize{Source: Arouba \& Fernandez-Villaverde (2014)}
+
+
+
+\end{document}
+
+
+
+
+
+
+
+\subsection{Endogenous Gridpoint Method}
+\begin{center}
+\begin{tabular}{p{1.5cm} p{14cm}}
+\hline
+Step 1. & Initialization\\
+\hline
+\\[-0.5em]
+&a. Set model parameters.\\
+&b. Define grid points for $(a_{t+1},e_{t}) \in \mathcal{A} \otimes \mathcal{E}$.\\
+&c. Construct a transition matrix $P(e_{t+1}|e_t)$.\\
+\\[-0.5em]\hline
+Step 2. &(EXGM) Computing a household problem at $t=T$\\
+\hline
+\\[-0.5em]
+& a. For any given $(a_T, e_T)$, $a_{T+1}=0$. Therefore, we obtain\\
+[-0.9em]
+&\parbox{4cm}{
+\begin{align}
+&c_T = w e_T + (1+r) a_T \notag\\
+&V^a_{T} = u'(c_T)(1+r)\notag
+\end{align}}\\
+\\[-1.5em]\hline
+Step 3. &(ENGM/EXGM) Computing a household problem at $t<T$\\
+\hline
+\\[-0.5em]
+& a. From equation \ref{eq:mod1_foc1}, we obtain $\hat{c}_t$ for each point in $(a_{t+1},e_{t})\in \mathcal{A} \otimes \mathcal{E}$ with $V^a_{t+1}$.\\
+& b. From equation \ref{eq:mod1_foc2}, we obtain $\hat{a}_t$ for each $(\hat{c}_t,a_{t+1},e_t)$.\\
+& c. Based on the obtained policy functions $g^c_t(\hat{a}_t,e_t) = \hat{c}_t$, $g^a_{t+1}(\hat{a}_t,e_t) = a_{t+1}$, we interpolate new policy functions for each grid point $(a_t,e_t)\in \mathcal{A} \otimes \mathcal{E}$.\\
+& d. From equation \ref{eq:mod1_foc3}, we compute $V^a_{t}$ . \\
+\\[-0.5em]\hline
+\end{tabular}
+\end{center}
+
+
+
+\subsection{Generalized Stochastic Simulation Algorithm}
+\begin{center}
+\begin{tabular}{p{1.5cm} p{14cm}}
+\hline
+Step 1. & Initialization\\
+\hline
+\\[-0.5em]
+&a. Set model parameters.\\
+&b. Choose an initial guess $b^{(1)} = \{b^{(1)}_1,b^{(1)}_2,...,b^{(1)}_T\}$ for a policy function $a_{t+1} = g^a(a_t,e_t) \approx \Psi(a_t,e_t; b_t)$.\\
+&c. Draw $N$ possible initial conditions $(a_0,e_0)$ from a distribution $\Gamma(a_0,e_0)$ so that the initial conditions can be distributed to $N_c\leq N$ workers.\\
+&c. Draw a sequence of income shocks $\{e_t\}_{t=1}^{T}$ for each initial condition according to the transition $P(e_{t+1}|e_t)$.\\
+\\[-0.5em]\hline
+Step 2. &Simulation\\
+\hline
+\\[-0.5em]
+& a. For any given initial $(a_0, e_0)$ with a sequence of income shocks $\{e_t\}_{t=1}^{T}$, simulate the model T periods forward to obtain a saving profile $\{\hat{a}_{t+1}\}$ based on the age-dependent policy function $b^{p}$. Parallelizing this process to a large number of workers enable to generate a large number of simulated profiles.\\
+\\[-0.5em]\hline
+Step 3. &Update the policy function\\
+\hline
+\\[-0.5em]
+& a. Using $N$ simulated sequences $\{c_t,a_{t+1}\}$, find $\hat{b}_t$ for each $t$ by using the Euler equation.\\
+& b. Check for convergence. \\
+& c. Update the policy function, $b^{(p+1)} = \xi b^{(p)} + (1-\xi) \hat{b}$.\\
+\\[-0.5em]\hline
+Step 4. &An Accuracy Test\\
+\hline
+\\[-0.5em]
+& a. Using a different series of income shocks and norms, check if the obtained policy function is accurate.\\
+\\[-0.5em]\hline
+\end{tabular}
+\end{center}
+
+\clearpage
+\begin{figure}
+\sf
+\vspace{-1.5cm}
+\begin{center}
+\bigskip
+\caption{\sf Computation Time: VFI}
+\subfloat[VFI]{\includegraphics[width=.55\textwidth]{Graphs/Figure_1.png}}
+\subfloat[EGM]{\includegraphics[width=.55\textwidth]{Graphs/Figure_2.png}}\\
+\subfloat{\includegraphics[width=.55\textwidth]{Graphs/Figure_3.png}}
+\subfloat{\includegraphics[width=.55\textwidth]{Graphs/Figure_4.png}}\\
+\end{center}
+\end{figure}
+
+
+
+\clearpage
+\section{Model 2: Elastic Labor Supply}
+The baseline model assumes that an individual lives until age $T$, the individual's problem is to choose an amount of saving, consumption, and labor supply:
+\begin{align*}
+V_t(a_{t},e_t) = \max_{c_t,n_t,a_{t+1}} u(c_{t},n_t) + \beta \mathbb{E}_t V_{t+1}(a_{t+1},e_{t+1})
+\end{align*}
+subject to
+\begin{align*}
+c_t + a_{t+1} 	&= w e_t n_t + (1+r)a_t \\
+a_{t+1} 		&\geq \underline{a}\\
+e_{t+1} 		&\sim P(e_{t+1}|e_t).
+\end{align*}
+and the utility function takes isoelastic preference, $u(c,n) = \frac{c^{1-\sigma}}{1-\sigma} - \chi \frac{n^{1+\eta}}{1+\eta}$.
+
+\subsection{FOCs and Envelope Condition}
+FOCs are:
+\begin{align}
+&u_c(c_t,n_t) = \lambda_t\\ 
+&\beta\mathbb{E} V^a_{t+1} =\lambda_t\\ 
+&u_{n}(c_t,n_t) = \lambda_t w e_t\\
+&a_{t+1} 	= w e_t n_t + (1+r)a_t - c_t
+\end{align}
+Envelope condition is:
+\begin{align}
+V^a_{t} = u_c(c_t,n_t)(1+r) \label{eq:mod2_foc4}
+\end{align}
+These yields
+\begin{align}
+&c_t^{-\sigma} = \beta \mathbb{E}V^a_{t+1}\label{eq:mod2_foc1}\\
+&-\frac{\chi n_t^{\eta}}{c_t^{-\sigma}} = w e_t\label{eq:mod2_foc2}\\
+&a_{t+1} = w e_t n_t + (1+r)a_t - c_t\label{eq:mod2_foc3}
+\end{align}
+
+
+
+The benchmark parameterization is
+\begin{center}
+\begin{tabular}{l cccc}
+parameter & value \\ \hline  
+$\sigma$  & 1.6 \\
+$\eta$ 	  & 2 \\
+$\chi$ 	  & 30 \\
+\hline
+\end{tabular}
+\end{center}
+
+
+
+\subsection{Value Function Iteration}
+\begin{center}
+\begin{tabular}{p{1.5cm} p{14cm}}
+\hline
+Step 1. & Initialization\\
+\hline
+\\[-0.5em]
+		 &a. Set model parameters.\\
+		&b. Define grid points for $(a_{t},e_{t}) \in \mathcal{A} \otimes \mathcal{E}$.\\
+		&c. Construct a transition matrix $P(e_{t+1}|e_t)$.\\
+\\[-0.5em]\hline
+Step 2. & Computing a household problem at $t=T$\\
+\hline
+\\[-0.5em]
+& a. For each point $(a_T, e_T)\in \mathcal{A} \otimes \mathcal{E}$, $a_{T+1}=0$; compute for all $n_{T}$, \\
+[-0.9em]
+&\parbox{4cm}{
+\begin{align}
+W_T(a_{T},e_T) = u(w e_T n_T + (1+r)a_T,n_T) \notag
+\end{align}} \\
+[-0.5em]
+& b. Then, choose $\max_{n_T} W_T(a_{T},e_T) = V_T(a_{T},e_T)$\\
+\\[-0.9em]\hline
+Step 3. & Computing a household problem at $t<T$\\
+\hline
+\\[-0.5em]
+& a. For each point $(a_{t},e_{t}) \in \mathcal{A} \otimes \mathcal{E}$ with $V_{t+1}$, compute for all $(a_{t+1},n_t)$, \\
+[-0.9em]
+&\parbox{4cm}{
+\begin{align}
+W_t(a_{t},e_t) = u(w e_t n_t + (1+r)a_t - a_{t+1},n_t) + \beta \mathbb{E}_t V_{t+1}(a_{t+1},e_{t+1}) \notag
+\end{align}} \\
+[-0.5em]
+& b. Then, choose $\max_{a_{t+1},n_t} W_t(a_t,e_t) = V_t(a_t,e_t)$\\
+\\[-0.9em]\hline
+\end{tabular}
+\end{center}
+
+
+\clearpage
+\subsection{Endogenous Gridpoint Method}
+\begin{center}
+\begin{tabular}{p{1.5cm} p{14cm}}
+\hline
+Step 1. & Initialization\\
+\hline
+\\[-0.5em]
+\hfill a.&Set model parameters.\\
+\hfill b.&Define grid points for $(a_{t+1},e_{t}) \in \mathcal{A} \otimes \mathcal{E}$.\\
+\hfill c.&Construct a transition matrix $P(e_{t+1}|e_t)$.\\
+\\[-0.5em]\hline
+Step 2. &(EXGM) Computing a household problem at $t=T$\\
+\hline
+\\[-0.5em]
+\hfill a.& For each point $(a_T, e_T)\in \mathcal{A} \otimes \mathcal{E}$, $a_{T+1}=0$; solve a nonlinear problem for $\hat{n}_{T}$, \\
+[-0.9em]
+&\parbox{4cm}{
+\begin{align}
+\chi n_T^{\eta} = w e_T (w e_T n_T + (1+r)a_T)^{-\sigma} \notag
+\end{align}} \\
+\hfill b.& From equation~\ref{eq:mod2_foc3}, compute $\hat{c}_T$.\\
+\hfill c.& Finally, compute $V^a_T(a_{T},e_T) = u_c(\hat{c}_T,\hat{n}_T)(1+r)$.\\
+\\[-0.5em]\hline
+Step 3. &(ENGM/EXGM) Computing a household problem at $t<T$\\
+\hline
+\\[-0.5em]
+\hfill a.& From equation \ref{eq:mod2_foc1}, we obtain $\hat{c}_t$ for each point in $(a_{t+1},e_{t})\in \mathcal{A} \otimes \mathcal{E}$ with $V^a_{t+1}$.\\
+\hfill b.& From equation \ref{eq:mod2_foc2}, we obtain $\hat{n}_t$ for each $(\hat{c}_t,a_{t+1},e_t)$.\\
+\hfill c.& From equation \ref{eq:mod2_foc3}, we obtain $\hat{a}_t$ for each $(\hat{c}_t,\hat{n}_t,a_{t+1},e_t)$.\\
+\hfill d.& Based on the obtained policy functions $g^c_t(\hat{a}_t,e_t) = \hat{c}_t$, $g^n_t(\hat{a}_t,e_t) = \hat{n}_t$, $g^a_{t+1}(\hat{a}_t,e_t) = a_{t+1}$, we interpolate new policy functions, $g^c_{t}(a_t,e_t) = \tilde{c}_{t}$, $g^n_{t}(a_t,e_t) = \tilde{n}_{t}$, and $g^a_{t+1}(a_t,e_t) = \tilde{a}_{t+1}$ for each grid point $(a_t,e_t)\in \mathcal{A} \otimes \mathcal{E}$.\\
+\hfill e.& If $g^a_{t+1}(a_t,e_t) = \tilde{a}_{t+1} < \underline{a}$, then do Step 2 only for the specific $(a_t,e_t)\in \mathcal{A} \otimes \mathcal{E}$. Otherwise, we compute $V^a_{t}$ from equation \ref{eq:mod2_foc4}.\\
+\\[-0.5em]\hline
+\end{tabular}
+\end{center}
+
+
+\clearpage
+\section{Model 3: Human Capital Investment}
+The baseline model assumes that an individual lives until age $T$, the individual's problem is to choose an amount of saving, consumption, labor supply, and human capital investment:
+\begin{align*}
+V_t(a_{t},h_{t},e_t) = \max_{c_t,a_{t+1},s_{t},h_{t+1}} u(c_{t}) + \beta \mathbb{E} V_{t+1}(a_{t+1},h_{t+1},e_{t+1})
+\end{align*}
+subject to
+\begin{align*}
+c_t + a_{t+1} 	&= w e_t h_t (1-s_t) + (1+r)a_t \\
+h_{t+1} 		&= (1-\delta)h_t + A_h h_t^\alpha s_t^\gamma\\
+s_t 			& \in [0,1]\\
+a_{t+1} 		&\geq \underline{a}\\
+e_{t+1} 		&\sim P(e_{t+1}|e_t).
+\end{align*}
+and the utility function takes isoelastic preference, $u(c) = \frac{c^{1-\sigma}}{1-\sigma}$
+
+FOCs of this problem:
+\begin{align}
+&u'(c_t) = \lambda_t \label{eq:mod3_foc1}\\ 
+&\beta \mathbb{E} V^a_{t+1} =\lambda_t \label{eq:mod3_foc2}\\ 
+& \beta \mathbb{E}  V^h_{t+1} = \mu_t  \label{eq:mod3_foc3}\\
+& \lambda_t  w e_t h_t = \mu_t \gamma A_h h_t^\alpha s_t^{\gamma-1} \label{eq:mod3_foc4}\\
+&c_t + a_{t+1} 	= w e_t h_t (1-s_t) + (1+r)a_t  \label{eq:mod3_foc5}\\
+&h_{t+1} 	= (1-\delta)h_t + A_h (h_t s_t)^\alpha \label{eq:mod3_foc6}
+\end{align}
+Envelope conditions are
+\begin{align}
+V^a_t &= u'(c_t) (1+r) \label{eq:mod3_foc7}\\
+V^h_t &= \lambda_t w e_t (1-s_t) + \mu_t \left[ (1-\delta) + \alpha A_h h_t^{\alpha -1}  s_t^{\gamma} \right] \notag\\
+&= \lambda_t w e_t \left(1 - s_t + \frac{\alpha}{\gamma} s_t + \frac{1-\delta}{\gamma A_h h_t^{\alpha-1} s_t^{\gamma -1}}\right) \label{eq:mod3_foc8}
+\end{align}
+The benchmark parameterization is
+\begin{center}
+\begin{tabular}{l cccc}
+parameter & value \\ \hline  
+$\alpha$  & 0.7 \\
+$\gamma$  & 0.7 \\
+$A_h$ 	  & 1 \\
+$\delta$  & 0.067 \\
+\hline
+\end{tabular}
+\end{center}
+
+
+
+\subsection{Value Function Iteration}
+\begin{center}
+\begin{tabular}{p{1.5cm} p{14cm}}
+\hline
+Step 1. & Initialization\\
+\hline
+\\[-0.5em]
+\hfill a.& Set model parameters.\\
+\hfill b.& Define grid points for $(a_{t},h_t,e_{t}) \in \mathcal{A} \otimes \mathcal{H} \otimes \mathcal{E}$.\\
+\hfill c.& Construct a transition matrix $P(e_{t+1}|e_t)$.\\
+\\[-0.5em]\hline
+Step 2. & Computing a household problem at $t=T$\\
+\hline
+\\[-0.5em]
+\hfill a.& For any given $(a_T, h_T, e_T)$, $a_{T+1}=s_t=0$. Therefore, we obtain\\
+[-0.9em]
+&\parbox{4cm}{
+\begin{align}
+&c_T = w e_T h_T + (1+r) a_T \notag\\
+&V_{T}(a_T,h_T,e_T) = u(c_T)\notag
+\end{align}}\\
+\\[-1.5em]\hline
+Step 3. & Computing a household problem at $t<T$\\
+\hline
+\\[-0.5em]
+\hfill a.& For each point $(a_{t},h_t,e_{t}) \in \mathcal{A} \otimes \mathcal{H} \otimes \mathcal{E}$ with $V_{t+1}$, compute for all $(a_{t+1},s_t)$, \\
+[-0.9em]
+&\parbox{4cm}{
+\begin{align}
+W_t(a_{t},h_t,e_t) = u(w e_t h_t (1-s_t) + (1+r)a_t - a_{t+1}) + \beta \mathbb{E}_t V_{t+1}(a_{t+1},h_{t+1},e_{t+1}) \notag
+\end{align}} \\
+[-0.5em]
+\hfill b.& Then, choose\\
+[-0.9em]
+&\parbox{4cm}{
+\begin{align}
+\max_{(a_{t+1},s_t)} W_t(a_t,h_t,e_t) = V_t(a_t,h_t,e_t). \notag
+\end{align}}\\
+\\[-1.5em]\hline
+\end{tabular}
+\end{center}
+
+
+
+\subsection{Endogenous Gridpoint Method}
+\begin{center}
+\begin{tabular}{p{1.5cm} p{14cm}}
+\hline
+Step 1. & Initialization\\
+\hline
+\\[-0.5em]
+\hfill a.& Set model parameters.\\
+\hfill b.& Define grid points for $(a_{t+1},h_t,e_{t}) \in \mathcal{A} \otimes \mathcal{H} \otimes \mathcal{E}$.\\
+\hfill c.& Construct a transition matrix $P(e_{t+1}|e_t)$.\\
+\\[-0.5em]\hline
+Step 2. &(EXGM) Computing a household problem at $t=T$\\
+\hline
+\\[-0.5em]
+\hfill a.& For any given $(a_T, h_T, e_T)$, $a_{T+1}=s_t=0$. Therefore, we obtain\\
+[-0.9em]
+&\parbox{4cm}{
+\begin{align}
+&c_T = w e_T h_T + (1+r) a_T \notag\\
+&V^a_{T} = u'(c_T)(1+r)\notag
+\end{align}}\\
+\\[-1.5em]\hline
+Step 3. &(ENGM/EXGM) Computing a household problem at $t<T$\\
+\hline
+\\[-0.5em]
+\hfill a.& From equation \ref{eq:mod3_foc4} together with equations \ref{eq:mod3_foc2}, \ref{eq:mod3_foc3} and \ref{eq:mod3_foc6}, solve a root-finding problem for $\hat{s}_t$ for each point $(a_{t+1},h_t,e_{t})\in \mathcal{A} \otimes \mathcal{H} \otimes \mathcal{E}$ with $V^a_{t+1}$ and $V^h_{t+1}$.\\
+\hfill b.& From equation \ref{eq:mod3_foc1}, \ref{eq:mod3_foc2} and \ref{eq:mod3_foc6}, we obtain $\hat{c}_t$ for each $(a_{t+1},h_t,e_{t})$ and $\hat{s}_t$.\\
+\hfill c.& From equation \ref{eq:mod3_foc5}, we obtain $\hat{a}_t$ for each $(a_{t+1},h_t,e_t)$ and $(\hat{c}_t,\hat{s}_t)$.\\
+\hfill d.& Based on the obtained policy functions $g^c_t(\hat{a}_t,h_t,e_t) = \hat{c}_t$, $g^s_t(\hat{a}_t,h_t,e_t) = \hat{s}_t$, $g^a_{t+1}(\hat{a}_t,h_t,e_t) = a_{t+1}$, we interpolate new policy functions, $g^c_{t}(a_t,h_t,e_t) = \tilde{c}_{t}$, $g^s_{t}(a_t,h_t,e_t) = \tilde{s}_{t}$, and $g^a_{t+1}(a_t,h_t,e_t) = \tilde{a}_{t+1}$ for each grid point $(a_t,h_t,e_t)\in \mathcal{A} \otimes \mathcal{H} \otimes \mathcal{E}$.\\
+\hfill e.& If $g^a_{t+1}(a_t,h_t,e_t) = \tilde{a}_{t+1} < \underline{a}$, then do Step 3(a) only for the specific $(a_t,h_t,e_t)$ and $a_{t+1}=\underline{a}$. Otherwise, we compute $V^a_{t}$ and $V^h_{t}$ from equation \ref{eq:mod3_foc7} and \ref{eq:mod3_foc8}.\\
+\\[-0.5em]\hline
+\end{tabular}
+\end{center}
+
+
+
+
+
+
+\end{document}

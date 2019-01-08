@@ -1,0 +1,1402 @@
+\documentclass[xcolor=x11names,compress]{beamer}
+%\documentclass[xcolor=x11names,handout]{beamer}
+%\documentclass{beamer}
+
+ 
+ %% Beamer Layout %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\useoutertheme[subsection=false]{miniframes}
+\useinnertheme{default}
+\usefonttheme{serif}
+\usepackage{palatino}
+\usepackage{comment}
+
+\setbeamerfont{title like}{shape=\scshape}
+\setbeamerfont{frametitle}{shape=\scshape, size=\large, series=\bfseries}
+
+%\setbeamercolor*{lower separation line head}{bg=DeepSkyBlue4} 
+\setbeamercolor*{normal text}{fg=black,bg=white} 
+\setbeamercolor*{alerted text}{fg=red} 
+\setbeamercolor*{example text}{fg=black} 
+\setbeamercolor*{structure}{fg=black} 
+ 
+\setbeamercolor*{palette tertiary}{fg=black,bg=black!10} 
+\setbeamercolor*{palette quaternary}{fg=black,bg=black!10} 
+
+\renewcommand{\(}{\begin{columns}}
+\renewcommand{\)}{\end{columns}}
+\newcommand{\<}[1]{\begin{column}{#1}}
+\renewcommand{\>}{\end{column}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage{graphicx}    % needed for including graphics e.g. EPS, PS
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{tabu}
+\usepackage[font=small]{caption}
+\usepackage[position=top]{subfig}
+\usepackage{tabularx}
+\usepackage{hyperref}
+\usepackage{multirow}
+\usepackage{tikz}
+\usetikzlibrary{arrows,shapes}
+\usetikzlibrary{decorations.pathreplacing}
+\usepackage{etex}
+\usepackage{comment}
+
+\hypersetup{colorlinks,linkcolor=}
+
+\setbeamercovered{transparent}
+\setbeamertemplate{itemize item}[triangle]
+\setbeamertemplate{itemize subitem}[circle]
+
+\newcommand{\se}{\tiny}
+\newcommand{\backupbegin}{
+   \newcounter{framenumberappendix}
+   \setcounter{framenumberappendix}{\value{framenumber}}
+}
+\newcommand{\backupend}{
+   \addtocounter{framenumberappendix}{-\value{framenumber}}
+   \addtocounter{framenumber}{\value{framenumberappendix}} 
+}
+\newcommand\setrow[1]{\gdef\rowmac{#1}#1\ignorespaces}
+\newcommand\clearrow{\global\let\rowmac\relax}
+\clearrow
+
+
+\begin{document}
+
+
+\title{Granularity versus Parallelization Overhead\\ in High-Performance Computing Systems}
+\author{Dongya Koh}
+\institute{University of Arkansas}
+\date{October 9-10, 2018}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+  \titlepage
+\end{frame}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Introduction}
+\begin{frame}
+\frametitle{Motivation}
+\begin{itemize}
+\item Solving a dynamic model with various kinds of heterogeneity needs to rely on numerical methods.
+\item Over the decades, a number of alternative solution methods were developed to improve the computation time and accuracy.
+\item The advent of multicore processors has accelerated the use of parallel computation.
+\item To further speed up, high-performance computing (HPC) system is now available.
+\end{itemize}
+\bigskip
+\textcolor{orange}{\textit{A Basic Question:}}
+\begin{itemize}
+\item To speed up the computational time, how can we take advantage of HPC?
+\end{itemize}
+\end{frame}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\frametitle{How can we take advantage of HPC?}
+The right choice of
+\bigskip
+\begin{enumerate}
+\item Programming languages
+\begin{itemize}
+\item[] \textcolor{gray}{C/C++, Fortran, Matlab, Python, Julia, R, etc.}
+\smallskip
+\end{itemize}
+\item Solution methods
+\begin{itemize}
+\item[] \textcolor{gray}{VFI, PFI, Projection, Perturbation, EGM, etc.}
+\smallskip
+\end{itemize}
+\item Scalability (how effectively parallelizable)
+\item Granularity (the amount of work in the parallel task)
+\item Number of processing elements/cores
+\end{enumerate}
+\end{frame}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\frametitle{Programming Languages }
+\begin{center}
+\small
+\begin{tabular}{p{2cm} | p{5cm} | p{3cm}}
+\hline
+Language & Type & Rel. Exec. Time\\[0.1em]
+\hline \hline
+&&\\[-0.8em]
+C/C++ 	& low-level, fastest with gcc & 1.00 \\[0.2em]
+Fortran & low-level  & 1.05 \\[0.2em] 
+\hline
+&&\\[-0.8em]
+Python 	& high-level, open-source, growing in popularity & 44$\times$ $\sim$ 270$\times$ \\[0.2em]
+Julia 	& high-level, new open-source & 2.64$\times$ $\sim$ 2.70$\times$ \\[0.2em]
+R & high-level, open-source & 281$\times$ $\sim$ 475$\times$ \\[0.2em]
+Matlab & high-level, not free, license issue & 9$\times$ $\sim$ 11$\times$ \\[0.2em]
+Mathematica & high-level & 809$\times$ \\[0.2em]
+\hline
+\end{tabular}
+\end{center}
+\vspace{-0.8em}
+\hspace{1em}\scriptsize{Source: Arouba \& Fernandez-Villaverde (2014)}
+\end{frame}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\frametitle{Solution Methods}
+\begin{center}
+\footnotesize
+\begin{tabular}{p{5cm} | p{5cm}}
+\hline
+\\[-1.0em]
+Low Dimension & High Dimension\\
+\\[-1.0em]
+\hline
+\\[-0.7em]
+Value function iteration (VFI) & Smolyak sparse grid method\\
+& \hspace{0.1em} \textcolor{gray}{{\footnotesize (Krueger \& Kubler, 2004, etc.)}} \\
+Policy function iteration (PFI) & Adaptive grid method \\
+& \hspace{0.1em} \textcolor{gray}{{\footnotesize (Brumm \& Scheidegger, 2017)}} \\
+Projection method & Stochastic simulation algorithm \\
+ \hspace{0.1em} \textcolor{gray}{{\footnotesize (Judd, 1992, etc.)}} & \hspace{0.1em} \textcolor{gray}{{\footnotesize (Den Haan \& Marcet, 1990, etc.)}} \\
+Endogenous grid method (EGM) & $\varepsilon$-distinguishable set method \\
+\hspace{0.1em} \textcolor{gray}{{\footnotesize (Carroll, 2005, etc.)}} & \hspace{0.1em} \textcolor{gray}{{\footnotesize (Judd, Maliar, Maliar, 2015)}} \\
+Envelope condition method & Cluster grid method \\
+\hspace{0.1em} \textcolor{gray}{{\footnotesize (Maliar \& Maliar, 2013)}} & \hspace{0.1em} \textcolor{gray}{{\footnotesize (Judd, Maliar, Maliar, 2015)}} \\
+Precomputation method & Perturbation method \\
+\hspace{0.1em} \textcolor{gray}{{\footnotesize (Judd, Maliar, Maliar, \& Tsener, 2017)}} & \hspace{0.1em} \textcolor{gray}{{\footnotesize (Judd \& Guu, 1993, etc.)}}\\
+[-0.7em]\\\hline
+\end{tabular}
+\end{center}
+
+\end{frame}
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\frametitle{Optimal Number of (Physical or Virtual) Cores}
+\begin{itemize}
+\item The total runtime of a program with $n$ cores:
+\begin{align*}
+T(n) = \frac{T_p}{n} + T_s + P(n)
+\end{align*}
+\item The optimal number of cores to minimize the runtime:
+\begin{align*}
+P'(n^*) = \frac{T_p}{n^{*2}} 
+\end{align*}
+\item If the parallelization overhead is approximated as $P(n)=pn^\alpha \quad (p,\alpha>0)$:
+\begin{align*}
+n^* = \left(\frac{T_p}{\alpha p} \right)^{1+\alpha}
+\end{align*}
+\end{itemize}
+\end{frame}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\frametitle{Parallelization Overhead}
+\begin{itemize}
+\item Sources of parallelization overhead:
+\begin{enumerate}
+\item Communication overhead in the form of synchronization and data communications
+\item Idling due to load imbalances
+\end{enumerate}
+\item Overheads vary by the implemented parallel algorithms and problems to be solved 
+\item Parallelization overhead with $n$ cores can be calculated as
+\begin{align*}
+P(n) = (T(n)-T_s) - \frac{T_p}{n},
+\end{align*}
+provided that $P(1)=0$
+\end{itemize}
+\end{frame}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\frametitle{Overview}
+\textcolor{orange}{\textit{What We Do:}}
+\begin{itemize}
+\item Solve a variety of life-cycle models with efficient/inefficient solution methods.
+\item Compute the parallelization overhead.
+\item Compare the runtime of each parallel program by granularity and the number of cores.
+\end{itemize}
+\bigskip
+\textcolor{orange}{\textit{What We Find:}}
+\begin{itemize}
+\item Parallelization overhead sets an upper bound to the HPC speed-ups.
+\item A design of HPC-efficient algorithm to reduce the parallelization overhead is essential for speed-ups in HPC.
+\end{itemize}
+\end{frame}
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\frametitle{HPC Environment}
+\textit{HPC System:}
+\begin{itemize}
+\item HPC consists of three sub clusters
+\item Interconnected with a 324-port QDR 40 Gbps nonblocking QLogic Infiniband switch and supplementary switches
+\item 88TB long-term storage and 35 TB of scratch storage
+\item OS: Centos 6.5
+\end{itemize}
+\smallskip
+\textit{Specifications of General Use Queue:}
+\begin{itemize}
+\item CPU: 4x AMD Opteron 16-core 2.3 GHz 6276
+\item Memory/node: 512GB
+\item Max PBS spec: nodes=2:ppn=64
+\item Max PBS time: 72:00:00
+\item Software: Python/3.6.0-Anaconda
+\end{itemize}
+
+\end{frame}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Model 1}
+\begin{frame}
+\frametitle{Model 1: Consumption/Saving}
+\begin{itemize}
+\item The baseline model assumes that an individual lives until age $T$.
+\item The individual's problem is to choose an amount of saving and consumption
+\begin{align*}
+V_t(a_{t},e_t) = \max_{c_t,a_{t+1}} u(c_{t}) + \beta \mathbb{E}_t V_{t+1}(a_{t+1},e_{t+1})
+\end{align*}
+\begin{align*}
+\text{s.t.} \quad c_t + a_{t+1} 	&= w e_t + (1+r)a_t \\
+a_{t+1} 		&\geq \underline{a}\\
+e_{t+1} 		&\sim P(e_{t+1}|e_t).
+\end{align*}
+\item The utility function takes isoelastic preference, $u(c) = \frac{c^{1-\sigma}}{1-\sigma}$
+\end{itemize}
+\end{frame}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\frametitle{Model 1: VFI Algorithm}
+\vspace{-0.7em}
+\begin{center}
+\footnotesize
+\begin{tabular}{p{1.0cm} p{9cm}}
+\hline
+Step 1. & Initialization\\
+\hline
+\\[-0.7em]
+\hfill a.&  Set model parameters.\\
+\hfill b.&  Define grid points for $(a_{t},e_{t}) \in \mathcal{A} \otimes \mathcal{E}$.\\
+\hfill c.&  Construct a transition matrix $P(e_{t+1}|e_t)$.\\
+\\[-0.8em]\hline
+Step 2. & Computing a household problem at $t=T$\\
+\hline
+\\[-0.7em]
+\hfill a.&  For any given $(a_T, e_T)$, $a_{T+1}=0$. Therefore, we obtain\\
+[-0.9em]
+&\parbox{4cm}{
+\begin{align}
+&c_T = w e_T + (1+r) a_T \notag\\
+&V_{T}(a_T,e_T) = u(c_T)\notag
+\end{align}}\\
+\\[-1.7em]\hline
+Step 3. & Computing a household problem at $t<T$\\
+\hline
+\\[-0.7em]
+\hfill \textcolor<2->{red}{a.}&  \textcolor<2->{red}{For each point $(a_{t},e_{t}) $ with $V_{t+1}$, compute for all $a_{t+1}$,} \\
+[-0.9em]
+&\textcolor<2->{red}{
+\parbox{4cm}{
+\begin{align}
+W_t(a_{t},e_t) = u(w e_t + (1+r)a_t - a_{t+1}) + \beta \mathbb{E}_t V_{t+1}(a_{t+1},e_{t+1}) \notag
+\end{align}}} \\
+[-0.5em]
+\hfill \textcolor<2->{red}{b.}&  \textcolor<2->{red}{Then, choose}\\
+[-0.9em]
+&\textcolor<2->{red}{
+\parbox{4cm}{
+\begin{align}
+\max_{a_{t+1}} W_t(a_t,e_t) = V_t(a_t,e_t). \notag
+\end{align}}}\\
+\\[-1.7em]\hline
+\end{tabular}
+\end{center}
+\end{frame}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\setcounter{subfigure}{0}
+\begin{frame}
+\frametitle{Model 1: VFI Running Time by Cores}
+\begin{figure}
+\begin{center}
+\includegraphics[width=0.9\textwidth]{Graphs/m1_vfi_by_cores.png}
+\end{center}
+\end{figure}
+\end{frame}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\setcounter{subfigure}{0}
+\begin{frame}
+\frametitle{Model 1: VFI Running Time and Accuracy by Grids}
+\begin{figure}
+\begin{center}
+\includegraphics[width=0.9\textwidth]{Graphs/m1_vfi_by_cores_grids.png}
+\end{center}
+\end{figure}
+\end{frame}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\frametitle{Model 1: EGM Algorithm}
+\vspace{-0.7em}
+\begin{center}
+\footnotesize
+\begin{tabular}{p{1cm} p{9cm}}
+\hline
+Step 1. & Initialization\\
+\hline
+\\[-0.8em]
+& $\cdots$\\
+\\[-0.8em]\hline
+Step 2. &(EXGM) Computing a household problem at $t=T$\\
+\hline
+\\[-0.8em]
+\hfill a.& For any given $(a_T, e_T)$, $a_{T+1}=0$. Therefore, we obtain\\
+[-0.9em]
+&\parbox{4cm}{
+\begin{align}
+&c_T = w e_T + (1+r) a_T \notag\\
+&V^a_{T} = u'(c_T)(1+r)\notag
+\end{align}}\\
+\\[-1.7em]\hline
+Step 3. &(ENGM/EXGM) Computing a household problem at $t<T$\\
+\hline
+\\[-0.8em]
+\hfill a.& (FOC) $\beta \mathbb{E} V^a_{t+1} = u'(c_t)$: compute $\hat{c}_t$ for each point in $(a_{t+1},e_{t})$.\\
+\hfill b.&  (BC) $c_{t} 	= w e_t + (1+r)a_t - a_{t+1}$: compute $\hat{a}_t$ for each $(\hat{c}_t,a_{t+1},e_t)$.\\
+\hfill c.&  Given the obtained policy functions $g^c_t(\hat{a}_t,e_t) = \hat{c}_t$, $g^a_{t+1}(\hat{a}_t,e_t) = a_{t+1}$, \textcolor<2->{red}{interpolate new policy functions for each grid point $(a_t,e_t)$.}\\
+\hfill d.&  (EC) $V^a_t = u'(c_t) (1+r)$, we compute $V^a_{t}$ . \\
+\\[-0.8em]\hline
+\end{tabular}
+\end{center}
+\end{frame}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\setcounter{subfigure}{0}
+\begin{frame}
+\frametitle{Model 1: EGM Running Time by Cores}
+\begin{figure}
+\begin{center}
+\includegraphics[width=.9\textwidth]{Graphs/m1_egm_by_cores.png}
+\end{center}
+\end{figure}
+\end{frame}
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\setcounter{subfigure}{0}
+\begin{frame}
+\frametitle{Model 1: EGM Running Time and Accuracy by Grids}
+\begin{figure}
+\begin{center}
+\includegraphics[width=0.9\textwidth]{Graphs/m1_egm_by_cores_grids.png}
+\end{center}
+\end{figure}
+\end{frame}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Model 2}
+\begin{frame}
+\frametitle{Model 2: Elastic Labor Supply}
+\begin{itemize}
+\item The individual's problem is to choose an amount of saving, consumption, and labor supply.
+\begin{align*}
+V_t(a_{t},e_t) = \max_{c_t,n_t,a_{t+1}} u(c_{t},n_t) + \beta \mathbb{E}_t V_{t+1}(a_{t+1},e_{t+1})
+\end{align*}
+\begin{align*}
+\text{s.t.} \quad c_t + a_{t+1} 	&= w e_t n_t + (1+r)a_t \\
+a_{t+1} 		&\geq \underline{a}\\
+e_{t+1} 		&\sim P(e_{t+1}|e_t).
+\end{align*}
+\item the utility function takes isoelastic preference, $u(c,n) = \frac{c^{1-\sigma}}{1-\sigma} - \chi \frac{n^{1+\eta}}{1+\eta}$.
+\end{itemize}
+\end{frame}
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\frametitle{Model 2: EGM Algorithm}
+\vspace{-0.7em}
+\begin{center}
+\footnotesize
+\begin{tabular}{p{1cm} p{9cm}}
+\hline
+Step 1. & Initialization\\
+\hline
+\\[-0.8em]
+& $\cdots$\\
+\\[-0.8em]\hline
+Step 2. &(EXGM) Computing a household problem at $t=T$\\
+\hline
+\\[-0.8em]
+\hfill a.& For each point $(a_T, e_T)$, $a_{T+1}=0$.\\
+\hfill \textcolor<2->{red}{b.}& \textcolor<2->{red}{(FOC1) $\chi n_T^{\eta} = w e_T (w e_T n_T + (1+r)a_T)^{-\sigma}$: solve a nonlinear problem for $\hat{n}_{T}$}\\
+\hfill c.& (BC) $c_T = w e_T n_{T} + (1+r) a_T$: compute $\hat{c}_T$.\\
+\hfill d.& (EC) $V^a_T(a_{T},e_T) = u_c(c_T,n_T)(1+r)$: compute $V^a_T$.\\
+\\[-0.8em]\hline
+Step 3. &(ENGM/EXGM) Computing a household problem at $t<T$\\
+\hline
+\\[-0.8em]
+\hfill a.& (FOC2) $c_t^{-\sigma} = \beta \mathbb{E}V^a_{t+1}$: compute $\hat{c}_t$ for each point in $(a_{t+1},e_{t})$.\\
+\hfill b.& From (FOC1), compute $\hat{n}_t$.\\
+\hfill c.& (BC) $a_{t+1} = w e_t n_t + (1+r)a_t - c_t$: compute $\hat{a}_t$.\\
+\hfill d.& Given the obtained policy functions $g^c_t(\hat{a}_t,e_t) = \hat{c}_t$, $g^n_t(\hat{a}_t,e_t) = \hat{n}_t$, $g^a_{t+1}(\hat{a}_t,e_t) = a_{t+1}$, we interpolate new policy functions, $g^c_{t}(a_t,e_t) = \tilde{c}_{t}$, $g^n_{t}(a_t,e_t) = \tilde{n}_{t}$, and $g^a_{t+1}(a_t,e_t) = \tilde{a}_{t+1}$ for each grid point $(a_t,e_t)\in \mathcal{A} \otimes \mathcal{E}$.\\
+\hfill e.& If $g^a_{t+1}(a_t,e_t) = \tilde{a}_{t+1} < \underline{a}$, then do Step 2 only for the specific $(a_t,e_t)\in \mathcal{A} \otimes \mathcal{E}$. Otherwise, we compute $V^a_{t}$ from (EC).\\
+\\[-0.8em]\hline
+\end{tabular}
+\end{center}
+\end{frame}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\setcounter{subfigure}{0}
+\begin{frame}
+\frametitle{Model 2: EGM Running Time by Cores}
+\begin{figure}
+\begin{center}
+\includegraphics[width=.9\textwidth]{Graphs/m2_egm_by_cores.png}
+\end{center}
+\end{figure}
+\end{frame}
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\setcounter{subfigure}{0}
+\begin{frame}
+\frametitle{Model 2: EGM Running Time and Accuracy by Grids}
+\begin{figure}
+\begin{center}
+\includegraphics[width=0.9\textwidth]{Graphs/m2_egm_by_cores_grids.png}
+\end{center}
+\end{figure}
+\end{frame}
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Model 3}
+\begin{frame}
+\frametitle{Model 3: Human Capital Investment}
+\begin{itemize}
+\item The individual's problem is to choose an amount of saving, consumption, and human capital investment
+\begin{align*}
+V_t(a_{t},h_{t},e_t) = \max_{c_t,a_{t+1},s_{t},h_{t+1}} u(c_{t}) + \beta \mathbb{E} V_{t+1}(a_{t+1},h_{t+1},e_{t+1})
+\end{align*}
+\begin{align*}
+\text{s.t.} \quad c_t + a_{t+1} 	&= w e_t h_t (1-s_t) + (1+r)a_t \\
+h_{t+1} 		&= (1-\delta)h_t + A_h h_t^\alpha s_t^\gamma\\
+s_t 			& \in [0,1]\\
+a_{t+1} 		&\geq \underline{a}\\
+e_{t+1} 		&\sim P(e_{t+1}|e_t).
+\end{align*}
+\item The utility function takes isoelastic preference, $u(c) = \frac{c^{1-\sigma}}{1-\sigma}$
+\end{itemize}
+\end{frame}
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\frametitle{Model 3: EGM Algorithm}
+\vspace{-0.7em}
+\begin{center}
+\footnotesize
+\begin{tabular}{p{1cm} p{9cm}}
+\hline
+Step 1. & Initialization\\
+\hline
+\\[-0.8em]
+& $\cdots$\\
+\\[-0.8em]\hline
+Step 2. &(EXGM) Computing a household problem at $t=T$\\
+\hline
+\\[-0.8em]
+\hfill a.& For each point $(a_T, h_T, e_T)$, $a_{T+1}=s_T=0$.\\
+\hfill b.& (BC) $c_T = w e_T h_T + (1+r) a_T$: compute $\hat{c}_T$.\\
+\hfill c.& (EC1) $V^a_{T} = u'(c_T)(1+r)$: compute $V^a_T$.\\
+\hfill d.& (EC2) $V^h_{T} = u'(c_T) w e_T \left(1 - \left(1-\frac{\alpha}{\gamma}\right) s_T + \frac{1-\delta}{\gamma A_h h_T^{\alpha-1} s_T^{\gamma -1}}\right)$: \\
+& compute $V^h_{T}$.\\
+\\[-0.5em]\hline
+\end{tabular}
+\end{center}
+\end{frame}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\frametitle{Model 3: EGM Algorithm}
+\vspace{-0.7em}
+\begin{center}
+\footnotesize
+\begin{tabular}{p{1cm} p{9cm}}
+\hline
+Step 3. &(ENGM/EXGM) Computing a household problem at $t<T$\\
+\hline
+\\[-0.5em]
+\hfill \textcolor<2->{red}{a.}& \textcolor<2->{red}{(FOC1) $\mathbb{E} V^a_{t+1}  w e_t h_t = \mathbb{E} V^h_{t+1} \gamma A_h h_t^\alpha s_t^{\gamma-1}$: solve a root-finding problem for $\hat{s}_t$ for each point $(a_{t+1},h_t,e_{t})$.}\\
+\hfill b.& (FOC2) $u'(c_t) = \beta \mathbb{E} V^a_{t+1}$: compute $\hat{c}_t$.\\
+\hfill c.& (BC) $c_t + a_{t+1} 	= w e_t h_t (1-s_t) + (1+r)a_t$: compute $\hat{a}_t$.\\
+\hfill d.& Given the obtained policy functions $g^c_t(\hat{a}_t,h_t,e_t) = \hat{c}_t$, $g^s_t(\hat{a}_t,h_t,e_t) = \hat{s}_t$, $g^a_{t+1}(\hat{a}_t,h_t,e_t) = a_{t+1}$, interpolate new policy functions, $g^c_{t}(a_t,h_t,e_t) = \tilde{c}_{t}$, $g^s_{t}(a_t,h_t,e_t) = \tilde{s}_{t}$, and $g^a_{t+1}(a_t,h_t,e_t) = \tilde{a}_{t+1}$ for each grid point $(a_t,h_t,e_t)$.\\
+\hfill e.& If $g^a_{t+1}(a_t,h_t,e_t) = \tilde{a}_{t+1} < \underline{a}$, then do Step 3(a) only for the specific $(a_t,h_t,e_t)$ and $a_{t+1}=\underline{a}$. Otherwise, we compute $V^a_{t}$ and $V^h_{t}$ from (EC1) and (EC2).\\
+\\[-0.5em]\hline
+\end{tabular}
+\end{center}
+\end{frame}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\setcounter{subfigure}{0}
+\begin{frame}
+\frametitle{Model 3: EGM Running Time by Cores}
+\begin{figure}
+\begin{center}
+\includegraphics[width=.9\textwidth]{Graphs/m3_egm_by_cores.png}
+\end{center}
+\end{figure}
+\end{frame}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\setcounter{subfigure}{0}
+\begin{frame}
+\frametitle{Model 3: EGM Running Time and Accuracy by Grids}
+\begin{figure}
+\begin{center}
+\includegraphics[width=0.9\textwidth]{Graphs/m3_egm_by_cores_grids.png}
+\end{center}
+\end{figure}
+\end{frame}
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Conclusion}
+\begin{frame}
+\frametitle{Technical Issues Using Matlab \& Python in HPC}
+\textit{Matlab:}
+\begin{itemize}
+\item The drawback of the Parallel Computing Toolbox is that it contains digital restrictions that only permit it to operate with 12 cores or fewer on a single computer.
+\item Matlab Distributed Computing Server costs several thousand dollars depending on the number of nodes licensed.
+\end{itemize}
+\bigskip
+\textit{Python:}
+\begin{itemize}
+%\item The parallelization overhead is surprisingly higher with two cores than with more than 2 cores.
+\item A joint use of numba and multiprocessing packages has a systemic conflict.
+\end{itemize}
+\end{frame}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\frametitle{Conclusion}
+\begin{itemize}
+\item \textit{Efficiently} running a parallel program in HPC environment requires a great amount of engineering effort.
+\item Parallelization overhead sets an upper bound to the HPC speed-ups.
+\item A design of HPC-efficient algorithm to reduce the parallelization overhead is essential for speed-ups in HPC.
+\end{itemize}
+\end{frame}
+
+
+
+
+\end{document}
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\title{Constrained Inefficiency over the Life Cycle}
+\author{Dongya (Don) Koh}
+\institute{University of Arkansas}
+\begin{frame}
+  \titlepage
+\end{frame}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Motivation}
+\begin{frame}
+\frametitle{Motivation}
+\small
+\begin{itemize}
+\item In a standard incomplete market model with uninsurable idiosyncratic shocks, the market equilibrium is inefficient.
+\item \textcolor{blue}{\textit{Constrained efficiency}} is an allocation in which the planner improves market allocations by internalizing the effect on market prices without changing market structures and household budget constraints.
+\item Under- or over- accumulation of capital is determined by the factor income compositions of the consumption-poor. {\footnotesize (D\'avila et al. 2012, Park 2017)}
+\end{itemize}
+
+\smallskip
+\textcolor{orange}{\textit{Questions}:}
+\begin{itemize}
+\item Who are more responsible for the over- or under-accumulation of capital?
+\item To what extent do saving and investment in human capital over an individual's course of life depart from efficient levels?
+\end{itemize}
+\end{frame}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\frametitle{Overview}
+\small
+\textcolor{orange}{\textit{What We Do}:}
+\begin{itemize}
+\item We quantitatively explore the extent to which the profiles of saving and human capital investment of U.S. households depart from the efficient levels.
+\end{itemize}
+\textcolor{orange}{\textit{What We Find}:}
+\begin{itemize}
+\item The median U.S. households save an average of 18.5\% less.
+\item They invest 11\% more time in human capital over the life-cycle.
+\item The top 10\% of income earners should save 26\% more and invest 17.3\% less time in human capital.
+\item The bottom 10\% of income earners throughout their lives are almost at the efficient level.
+\end{itemize}
+\textcolor{orange}{\textit{If time allows...}:}
+\begin{itemize}
+\item Policy implications (tax/subsidy implementations)
+\item Life-cycle effects of student debts
+\end{itemize}
+\end{frame}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[label=cons-poor]
+\frametitle{The Fraction of the Bottom Ten Percent of Households}
+\begin{figure}
+\begin{center}
+\includegraphics[width=.8\textwidth]{Graphs/frac_age.png}
+\end{center}
+\end{figure}
+\hyperlink{lifecycle-prop}{\beamergotobutton{Life-Cycle Properties}}
+\end{frame}
+
+
+
+\section{Model}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[label=household]
+\frametitle{Benchmark Model: Household's Problem}
+\begin{itemize}
+\item Given factor prices, the household policy functions solve the recursive household problem, for $j\leq J_R$,
+{\footnotesize
+\begin{align*}
+V_j(a_j,h_j;\theta_0) &= \max_{c_j,n_j,s_j,a_{j+1},h_{j+1}} u(c_j,1-n_j) + \beta \mathbb{E} V_{j+1}(a_{j+1},h_{j+1};\theta_0) \\
+\text{s.t.} \quad &(1+\tau_c) c_j + a_{j+1} = \tilde{y}_j - T(\tilde{y}_j)  + (1+r(1-\tau_{k}))a_j \\
+& h_{j+1} = \exp(\varepsilon_{j+1})H(h_j,n_j,s_j;\theta_0) \\
+&\tilde{y}_j =w h_j n_j (1-s_j) - 0.5\tau_{ss}\min(w h_j n_j (1-s_j),\bar{y})\\
+&a_j \geq -\underline{a}
+\end{align*}
+}
+\item And for $j>J_R$
+{\footnotesize
+\begin{align*}
+W_j(a_j) &= \max_{c_j,a_{j+1}} u(c_j) + \beta  W_{j+1}(a_{j+1}) \\
+\text{s.t.} \quad &(1+\tau_c) c_j + a_{j+1} = y_{ss}  + (1+r(1-\tau_{k}))a_j \\
+&a_j \geq -\underline{a} 
+\end{align*}
+}
+\item Utility function: $u(c_j,1-n_j) = \frac{c_j^{1-\psi}}{1-\psi} + \chi\frac{(1-n_j)^{1-\phi}}{1-\phi}$.
+\end{itemize}
+\hyperlink{model}{\beamergotobutton{Household's Problem}}
+\end{frame}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\frametitle{Benchmark Model: Household's Problem}
+\noindent\textbf{\textit{Human Capital Accumulation:}}
+\begin{itemize}
+\item Technically, Ben-Porath's OJT technology gives three- to four-times higher consumption growth than income growth.
+\vspace{-0.3cm}
+\begin{itemize}
+\item Unrealistically high consumption or capital income tax.
+\item A positive initial asset that provides an extra insurance.
+\item Utility from leisure.
+\end{itemize}
+\item We incorporate an elastic labor supply in the form of learning-by-doing.
+\item Human capital accumulation:
+\begin{align*}
+h_{j+1} = \exp(\varepsilon_{j+1})[(1-\delta_h) h_j + \theta_0 (h_j n_j s_j)^{\gamma}]
+\end{align*}
+\end{itemize}
+\end{frame}
+
+
+
+\section{Competitive Equilibrium}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[label=comp_eq]
+\frametitle{Benchmark Model: Competitive Equilibrium}
+\small
+\textit{A competitive equilibrium with tax distortions} is a collection of policy functions, value functions, factor prices $\{r,w\}$, aggregate input factors $\{K,L\}$, and distributions of individual states by age $\{\Psi_j(\mathbf{x}_j)\}_{j=1}^J$, given the social security payments, government spending, a set of taxes, and an initial distribution $\mathcal{N}(\mathbf{M},\mathbf{\Sigma})$, such that
+\begin{enumerate}
+\item Given factor prices, the household policy functions solve the recursive household problem for $j\leq J_R$,
+\item Competitive factor prices equal the marginal products of the input factors in the production technology,
+\item Markets clear, \quad \hyperlink{mc}{\beamergotobutton{MC}}
+\item Government budgets balance, \quad \hyperlink{gb}{\beamergotobutton{Gov}}
+\item and the distributions of households in each state and at each age are consistent with the household's policy functions.
+\end{enumerate}
+\hyperlink{calib}{\beamergotobutton{Calibration}}
+\hyperlink{match}{\beamergotobutton{Data vs Model}}
+\end{frame}
+
+
+
+
+
+
+\section{Constrained Efficiency}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\frametitle{Constrained Efficiency}
+\begin{itemize}
+\item The constrained optimum can be found when the planner improves on market allocations by internalizing the effect on prices without completing the market and without changing households' budget constraints.
+\item The planner maximizes a utilitarian objective assigning equal weights to all households given initial states $(a_0,h_0;\theta)$:
+{\footnotesize
+\begin{align*}
+&\max \sum_{j=0}^{J_R}  \mu_j \int_{\chi} V_j(\mathbf{x}_j)d\Psi_j + \sum_{j=J_R+1}^{J} \mu_j \int_{\chi} W_j(a_j)d\Psi_j \notag \\
+\text{s.t.} \quad &K  =  \sum_{j=0}^J \mu_j \int_{\mathcal{X}} a_j d\Psi_j(\mathbf{x}_j), 
+L  =  \sum_{j=0}^{J_R} \mu_j  \int_{\mathcal{X}} h_j n_j(\mathbf{x}_j) (1-s_j(\mathbf{x}_j)) d\Psi_j(\mathbf{x}_j)\\
+& r = F_k(K,L), \quad w = F_l(K,L), \quad \Psi_{j+1} = G_j(\Psi_j), \quad \forall j\leq J
+\end{align*}
+}
+\end{itemize}
+\end{frame}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\frametitle{Competitive Equilibrium vs. Constrained Efficiency}
+\begin{table}[h!]
+\footnotesize
+\begin{center}
+\begin{tabular}{llll}
+\hline\hline
+  			& \vtop{\hbox{\strut Competitive}\hbox{\strut Equilibrium}} & \vtop{\hbox{\strut Constrained}\hbox{\strut Optimum}} & \vtop{\hbox{\strut No Income}\hbox{\strut Risk}}\\ 
+\hline
+\\[-0.5em]
+Interest rate ($r$)			& 4.22\%	& 3.44\%	& 5.68\%\\
+Wage ($w$)   		   		& 1.000 	& 1.034		& 0.942\\
+Aggregate output ($Y$)	    & 7.182 	& 7.249		& 5.723\\
+Aggregate capital ($K$)	    & 21.126 	& 22.907	& 14.856\\
+Aggregate labor	($L$)    	& 4.874 	& 4.751		& 4.121\\
+Aggregate consumption ($C$)	& 4.826 	& 4.764		& 3.990\\
+Capital-output ratio ($K/Y$)& 2.942 	& 3.161		& 2.596\\
+Capital-labor ratio ($K/L$) & 4.335 	& 4.817		& 3.605\\
+Capital wedge ($\Delta_k$)  & -		 	& 0.000145	& - \\
+Labor wedge ($\Delta_h$) 	& -		 	& -0.001048	& - \\
+\\[-0.5em]
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+\end{frame}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\setcounter{subfigure}{0}
+\begin{frame}
+\frametitle{Life-cycle Effects: Median Household}
+\begin{figure}
+\begin{center}
+\subfloat[\sf Saving]{\includegraphics[width=.5\textwidth]{Graphs/mean_a_eff.png}\label{fig:medassets}}
+\subfloat[\sf Human Capital Investment]{\includegraphics[width=.5\textwidth]{Graphs/mean_s_eff.png}\label{fig:medtime}}
+\end{center}
+\end{figure}
+\end{frame}
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\setcounter{subfigure}{0}
+\begin{frame}
+\frametitle{Life-cycle Effects: Median Household}
+\begin{figure}
+\begin{center}
+\vspace{-0.5cm}
+\subfloat[\sf Hourly Wage]{\includegraphics[width=.4\textwidth]{Graphs/mean_w_eff.png}\label{fig:medwage}}
+\hspace{2cm}
+\subfloat[\sf Consumption]{\includegraphics[width=.4\textwidth]{Graphs/mean_c_eff.png}\label{fig:medcons}}
+\vspace{-0.2cm}
+\subfloat[\sf Hours of Work]{\includegraphics[width=.4\textwidth]{Graphs/mean_n_eff.png}\label{fig:medwork}}
+\end{center}
+\end{figure}
+\end{frame}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\setcounter{subfigure}{0}
+\begin{frame}
+\frametitle{Distributional Effects: Top \& Bottom 10\% Income Earners}
+\begin{figure}
+\begin{center}
+\subfloat[\sf Saving]{\includegraphics[width=.5\textwidth]{Graphs/mean_a_init.png}\label{fig:distassets}}
+\subfloat[\sf Human Capital Investment]{\includegraphics[width=.5\textwidth]{Graphs/mean_s_init.png}\label{fig:disttime}}
+\end{center}
+\end{figure}
+\end{frame}
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\setcounter{subfigure}{0}
+\begin{frame}
+\frametitle{Distributional Effects: Top \& Bottom 10\% Income Earners}
+\begin{figure}
+\begin{center}
+\vspace{-0.5cm}
+\subfloat[\sf Hourly Wage]{\includegraphics[width=.4\textwidth]{Graphs/mean_w_init.png}\label{fig:distwage}}
+\hspace{2cm}
+\subfloat[\sf Consumption]{\includegraphics[width=.4\textwidth]{Graphs/mean_c_init.png}\label{fig:distcons}}
+\vspace{-0.2cm}
+\subfloat[\sf Hours of Work]{\includegraphics[width=.4\textwidth]{Graphs/mean_n_init.png}\label{fig:distwork}}
+\end{center}
+\end{figure}
+\end{frame}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\setcounter{subfigure}{0}
+\begin{frame}
+\frametitle{Tax Implementation of Constrained Efficiency}
+\begin{itemize}
+\item The characterized constrained efficient profiles can also be implemented by a modified current tax system.
+\item The constrained inefficiency should be incorporated into the capital income tax and progressive labor income tax with a lump-sum transfer.
+\begin{align*}
+&\widehat{\tau}_{k,j}(\mathbf{x}_j)  = \tau_{k} - \frac{\Delta_{k}}{r \lambda^c_j}\\
+&\widehat{T}'_j(\tilde{y}_j, \mathbf{x}_j) = T'(\tilde{y}_j) - \frac{\Delta_{h}}{w \lambda^c_j (1-0.5 \tau_{ss} \mathbb{I}_{y_j\leq \bar{y}})}.
+\end{align*}
+\end{itemize}
+\end{frame}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\setcounter{subfigure}{0}
+\begin{frame}
+\frametitle{Tax Implementation of Constrained Efficiency}
+\begin{figure}
+\begin{center}
+\subfloat[\sf Capital Income Tax]{\includegraphics[width=.5\textwidth]{Graphs/mean_tk_eff.png}\label{fig:taxcapital}}
+\subfloat[\sf Marginal Labor Income Tax]{\includegraphics[width=.5\textwidth]{Graphs/mean_tpy_eff.png}\label{fig:taxlabor}}
+\end{center}
+\end{figure}
+\end{frame}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\frametitle{Conclusion}
+\begin{itemize}
+\item In the life-cycle setting, the consumption-poor are in general younger cohorts.
+\item Younger cohorts become better off by increasing aggregate capital-labor ratio.
+\end{itemize}
+\smallskip
+\textcolor{orange}{\textit{For the constrained optimum,}}
+\begin{itemize}
+\item Through life-cycle,
+\begin{itemize}
+\item Income should be transferred from old age to youth.
+\item Wealth should be transferred from youth to old age.
+\end{itemize}
+\item Cross-sectionally,
+\begin{itemize}
+\item The constrained inefficiency is largely corrected by the top income earners. 
+\item The lower income earners reap benefits through the change in market prices.
+\end{itemize}
+\end{itemize}
+\end{frame}
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\appendix
+\backupbegin
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\frametitle{\sf }
+\sf 
+\centering
+%\vspace{0.5cm}
+{\huge \hfill Appendix \hfill}
+\end{frame}
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[label=lifecycle-prop]
+\frametitle{Life-cycle Properties of Constrained Inefficiency}
+\small
+\begin{itemize}
+\item \textcolor{blue}{\textit{Constrained efficiency}} is an allocation in which the planner improves market allocations by internalizing the effect on market prices without changing market structures and household budget constraints.
+\smallskip
+\item Extending DHKR's two-period framework to $J>2$ periods, the planner solves the following problem:
+\end{itemize}
+\begin{align*}
+\max_{a_{j+1}} \mathbb{E}\sum_{j=0}^J \int_{\chi} \beta^j u(f_{l}(K,L) \varepsilon_j + f_{k}(K,L) a_j - a_{j+1}) d\psi_j
+\end{align*}
+\begin{align*}
+\text{subject to}\quad &K = \sum_{j=0}^J \int_{\chi} a_{j} \; d\psi_j, \quad L = \sum_{j=0}^J \int_{\chi} \varepsilon_j \; d\psi_j,\\
+&\psi_{j+1} = \int_{\chi} Q_j((a_j,\varepsilon_j),B) d\psi_j.
+\end{align*}
+\end{frame}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\frametitle{Life-cycle Properties of Constrained Inefficiency}
+\small
+\begin{itemize}
+\item A typical Euler equation plus an additional marginal benefit/cost from the change in market prices:
+\end{itemize}
+\begin{align*}
+u'(c_j) = \beta  f_k(K',L) \mathbb{E} u'(c_{j+1}) + \Delta_k,
+\end{align*}
+where 
+{\scriptsize
+\begin{align*}
+\Delta_k &=  \sum_{j=0}^J \beta f_{kk}(K',L) K' \int_{\chi} \mathbb{E} u'(c_{j+1}) \left[\frac{a_{j+1}}{K'}  - \frac{\varepsilon_{j+1}}{L} \right] d \psi_{j+1}
+\end{align*}
+}
+\begin{itemize}
+\item The constrained inefficiency is a marginal-utility weighted average of an individual's effect on increasing capital through market prices.
+\end{itemize}
+\hyperlink{cons-poor}{\beamergotobutton{Back}}
+\end{frame}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[label=model]
+\frametitle{Benchmark Model: Household's Problem}
+\noindent\textbf{\textit{Per-period decisions:}}
+\begin{itemize}
+\item Households are \textit{ex ante} heterogeneous in their initial human capital ($h_0$), initial wealth ($a_0$), and learning ability ($\theta_0$).
+\item Households are employed throughout their lives until retirement.
+\item a household chooses how much to consume ($c_{j}$) and save ($a_{j+1}$). Also, at each working age $j\leq J_{R}$, one unit of time endowment is allocated into labor and leisure ($n_j\in[0,1]$), and a fraction of working hours are allocated to human capital investment ($s_j\in[0,1]$).
+\item There is a borrowing limit $\underline{a}\geq 0$.
+\end{itemize}
+\end{frame}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\frametitle{Benchmark Model: Household's Problem}
+\noindent\textbf{\textit{Labor income risks:}}
+\begin{itemize}
+\item Households encounter idiosyncratic labor income shocks ($\varepsilon_j$) through human capital at each working age.
+\item $\varepsilon_j \sim N(0,\sigma^2_{\varepsilon})$
+\item The shock is uninsurable due to the absence of full insurance contracts.
+\end{itemize}
+\end{frame}
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\frametitle{Benchmark Model: Household's Problem}
+\noindent\textbf{\textit{Taxes and transfers:}}
+\begin{itemize}
+\item The government imposes ($\tau_{c}$, $\tau_{k}$, $\tau_{ss}$, $T(y)$).
+\begin{align*}
+T(y) = \tau_0 (y - (y^{-\tau_1} + \tau_2)^{-1/\tau_1})
+\end{align*}
+\item Households receive social security payments ($y_{ss}$).
+\end{itemize}
+\bigskip
+\noindent\textbf{\textit{Household budget constraint}}
+\begin{itemize}
+\item the household budget constraint for age cohort $j$ at each point in time:
+\begin{align*}
+(1+\tau_c) c_j + a_{j+1} &= \tilde{y}_j - T(\tilde{y}_j)  + (1+r(1-\tau_k)) a_j, & \text{ for }j\leq J_R\\
+(1+\tau_c) c_j + a_{j+1} &= y_{ss}  + (1+r(1-\tau_k))a_j, & \text{ for }j>J_R.
+\end{align*}
+\item The household's labor income:
+\begin{align*}
+\tilde{y}_j = \left\{ 
+\begin{array}{l l}
+w  h_j n_j (1-s_j) - 0.5\tau_{ss}\min(w h_j n_j (1-s_j),\bar{y}) & \text{ if }j\leq J_R\\
+0 & \text{ if }j> J_R.
+\end{array}
+\right.
+\end{align*}
+\end{itemize}
+\hyperlink{household}{\beamergotobutton{Back}}
+\end{frame}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[label=mc]
+\frametitle{Benchmark Model: Aggregation}
+\noindent\textbf{\textit{Production technology}}
+\begin{align*}
+Y = AK^\alpha L^{1-\alpha}
+\end{align*}
+\bigskip
+\noindent\textbf{\textit{Initial Distribution}}\\
+An individual's initial assets, human capital, and learning ability are trivariate log-normally distributed:
+\begin{align*}
+\mathbf{M}=\left(\begin{array}{c} m_a\\m_h\\m_{\theta} \end{array}\right), \quad 
+\mathbf{\Sigma}=\left(\begin{array}{ccc}
+\sigma^2_a 									& \lambda_{ah}\sigma_{h}\sigma_{a} 				&\lambda_{a\theta}\sigma_{\theta}\sigma_{a}\\ 
+\lambda_{ah}\sigma_{a}\sigma_{h} 			& \sigma^2_h 									&\lambda_{h\theta}\sigma_{\theta}\sigma_{h}\\ 
+\lambda_{a\theta}\sigma_{a}\sigma_{\theta} 	& \lambda_{h\theta}\sigma_{h}\sigma_{\theta} 	& \sigma^2_{\theta}\\ 
+\end{array}\right).
+\end{align*}
+\end{frame}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\frametitle{Benchmark Model: Aggregation}
+\begin{itemize}
+\item At each point in time, a household's state at age $j$: $\mathbf{x}_j = (a_j,h_j;\theta_0)$.
+\item Define a state space as $\mathcal{X}=\mathcal{A}\times\mathcal{H}\times\Theta_0$.
+\item Define a joint probability measure $\Psi_j$ over the probability space $(\mathcal{X},B(\mathcal{X}),\Psi_j)$
+\item In equilibrium, the goods, labor, and capital markets clear at the competitive prices at each point in time:
+{\footnotesize
+\begin{align*}
+&K  =  \sum_{j=0}^J \mu_j \int_{\mathcal{X}} a_j d\Psi_j(\mathbf{x}_j)\\
+&L  =  \sum_{j=0}^{J_R} \mu_j  \int_{\mathcal{X}} h_j n_j(\mathbf{x}_j) (1-s_j(\mathbf{x}_j)) d\Psi_j(\mathbf{x}_j)\\
+& \sum_{j=0}^{J} \mu_j  \int_{\mathcal{X}} c_j(\mathbf{x}_j) d\Psi_j(\mathbf{x}_j) + (1+n)K' + \mathcal{G} = Y + (1-\delta)K 
+\end{align*}
+}
+\end{itemize}
+\hyperlink{comp_eq}{\beamergotobutton{Competitive Equilibrium}}
+\end{frame}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[label=gb]
+\frametitle{Benchmark Model: Government Budget Balance}
+\begin{itemize}
+\item The government budget balances:
+{\footnotesize
+\begin{align*}
+\mathcal{G} =  \sum_{j=0}^{J} \int_{\mathcal{X}} (\tau_c c_j(\mathbf{x}_j) + r \tau_{k} a_j + T(\tilde{y}_j(\mathbf{x}_j))) d\Psi_{j}(\mathbf{x}_j)
+\end{align*}
+}
+\item The social security policies satisfy:
+{\footnotesize
+\begin{align*}
+\sum_{j=0}^{J_R} \int_{\mathcal{X}} \tau_{ss}\min\{w h_j n_j (1-s_j(\mathbf{x}_j)),\bar{y}\}d\Psi_{j}(\mathbf{x}_j) = \sum_{j=J_R+1}^{J} \int_{\mathcal{X}} y_{ss} d\Psi_{j}(\mathbf{x}_j).
+\end{align*}
+}
+\end{itemize}
+\bigskip
+\bigskip
+\bigskip
+\bigskip
+\bigskip
+\bigskip
+\hyperlink{comp_eq}{\beamergotobutton{Competitive Equilibrium}}
+\end{frame}
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[label=calib]
+\frametitle{Calibration}
+\begin{table}[h!]
+\footnotesize
+\sf
+\begin{center}
+\begin{tabular}{p{1.5cm}| p{1.5cm} | p{7cm}}
+\hline
+Parameters  &	Value & Target \\ \hline\hline
+\multicolumn{3}{l}{\textbf{Demographics}}\\\hline
+$n$			&	0.011		& from BLS data\\
+$J_R$       & 40 			& working age from 23 to 62\\
+$J$	        & 58 			& age up to 80\\\hline
+\multicolumn{3}{l}{\textbf{Preferences and Technology}}\\\hline
+$r$ 		&0.042 			& annual net interest rate at 4.2\% \\
+$\beta$		&0.966* 			& average capital-output ratio $K/Y=$2.947 \\
+$\alpha$	& 0.322			& average capital income share\\
+$\delta_k$	& 0.067 		& $\alpha \frac{Y}{K} - r$\\
+$\gamma$	& [0.7,0.9]		& 0.7 as a benchmark from Huggett et al. 2011 \\
+$\psi$		& 2.603*		& consumption age profile\\
+$\phi$		& 4.387*		& labor supply age profile\\
+$\chi$		& 0.052*		& average hours of work\\
+$\delta_h$	& 0.023* 			& labor income decline in old age\\ \hline
+\end{tabular}
+\end{center}
+\end{table}
+\end{frame}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\frametitle{Calibration}
+\begin{table}[h!]
+\footnotesize
+\sf
+\begin{center}
+\begin{tabular}{p{1.5cm}| p{1.5cm} | p{7cm}}
+\hline
+Parameters  &	Value & Target \\ \hline\hline
+\multicolumn{3}{l}{\textbf{Initial conditions}}\\\hline
+$m_{h}$ 	& 2.734* 		& average initial wage at age 23 \\
+$m_{\theta}$&-1.021*		& average wage growth \\
+$\sigma_{h}$		&0.291*   & initial variance of wage profile \\
+$\sigma_{\theta}$	&0.285* 	 & variance growth of wage profile \\
+$\lambda_{h\theta}$ 		&0.003* & the covariance of initial wage and initial wage growth \\\hline
+\multicolumn{3}{l}{\textbf{Shock process}}\\\hline
+$\sigma_{\varepsilon}$ & 0.111 & Huggett et al. 2011\\\hline
+\multicolumn{3}{l}{\textbf{Tax system }}\\\hline
+$\tau_{ss}$ & 0.124 & Data\\
+$\bar{y}$ & 2.5$\times E(y)$ & Data\\
+%$y_{ss}$ & 1.002* & social security budget balance \\
+$\tau_c$ & 0.06 & Mendoza et al. 1994\\
+$\tau_k$ & 0.40 & Domeij \& Heathcote 2004\\
+$\tau_{0}$ & 0.258 & Gouveia \& Strauss 1994 \\
+$\tau_{1}$ & 0.768 & Gouveia \& Strauss 1994 \\
+%$\tau_{2}$ & 0.000005* & government budget balance \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+\hyperlink{comp_eq}{\beamergotobutton{Competitive Equilibrium}}
+\end{frame}
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\setcounter{subfigure}{0}
+\begin{frame}[label=match]
+\frametitle{Competitive Equilibrium Mean Profiles}
+\begin{figure}
+\begin{center}
+\vspace{-0.5cm}
+\subfloat[\sf Hourly Wage]{\includegraphics[width=.4\textwidth]{Graphs/mean_w_model2.png}\label{fig:mwage}}
+\hspace{2cm}
+\subfloat[\sf Consumption]{\includegraphics[width=.4\textwidth]{Graphs/mean_c_model2.png}\label{fig:mcons}}
+\vspace{-0.2cm}
+\subfloat[\sf Hours of Work]{\includegraphics[width=.4\textwidth]{Graphs/mean_n_model2.png}\label{fig:mlab}}
+\end{center}
+\end{figure}
+\end{frame}
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\setcounter{subfigure}{0}
+\begin{frame}
+\frametitle{{\small Competitive Equilibrium Variance Profiles}}
+\begin{figure}
+\begin{center}
+\vspace{-0.5cm}
+\subfloat[\sf Hourly Wage]{\includegraphics[width=.4\textwidth]{Graphs/var_w_model2.png}\label{fig:vwage}}
+\hspace{2cm}
+\subfloat[\sf Consumption]{\includegraphics[width=.4\textwidth]{Graphs/var_c_model2.png}\label{fig:vcons}}
+\vspace{-0.2cm}
+\subfloat[\sf Hours of Work]{\includegraphics[width=.4\textwidth]{Graphs/var_n_model2.png}\label{fig:vlab}}
+\end{center}
+\end{figure}
+\hyperlink{comp_eq}{\beamergotobutton{Competitive Equilibrium}}
+\end{frame}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\frametitle{Computational Algorithm: Household's Problem}
+{\footnotesize
+\begin{align*}
+&\frac{u_c(c_j,1-n_j)}{1+\tau_c} = \lambda^c_j\\ 
+&u_n(c_j,1-n_j) = \lambda^c_j w h_j (1-s_j) (1-0.5 \tau_{ss} \mathbb{I}_{\tilde{y}_j\leq \bar{y}}) (1-T'(\tilde{y}_j)) + \lambda^h_j \exp(\varepsilon_{j+1}) \frac{\partial H}{\partial n_j}\\
+&\lambda^c_j wh_j n_j(1-0.5 \tau_{ss} \mathbb{I}_{\tilde{y}_j\leq \bar{y}}) (1-T'(\tilde{y}_j))  = \lambda^h_j \exp(\varepsilon_{j+1}) \frac{\partial H}{\partial s_j}\\
+&(1+\tau_c) c_j + a_{j+1} = \tilde{y}_j - T(\tilde{y}_j)  + (1+r(1-\tau_{k}))a_j\\
+&h_{j+1} = \exp(\varepsilon_{j+1})H(h_j,n_j,s_j;\theta_0)\\
+&\beta \mathbb{E} V^a_{j+1} = \lambda^c_j \\
+&\beta \mathbb{E} V^h_{j+1} = \lambda^h_j \\
+&V^a_j = \lambda^c_j (1+r(1-\tau_{k})) \\
+&V^h_j = \lambda^c_j w n_j(1-s_j) (1-0.5 \tau_{ss} \mathbb{I}_{\tilde{y}_j\leq \bar{y}}) (1-T'(\tilde{y}_j)) + \lambda^h_j \exp(\varepsilon_{j+1})\frac{\partial H}{\partial h_j}  \\
+&\frac{\partial H}{\partial n_j} = \gamma \theta_0 (h_j n_j s_j)^{\gamma-1} h_j s_j,\quad
+\frac{\partial H}{\partial s_j} = \gamma \theta_0 (h_j n_j s_j)^{\gamma-1}h_j n_j \\
+&\frac{\partial H}{\partial h_j} = (1-\delta_h) + \gamma \theta_0 (h_j n_j s_j)^{\gamma-1} n_j s_j \\
+\end{align*}
+}
+\end{frame}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\frametitle{Computational Algorithm: Household's Problem}
+{\footnotesize
+\begin{enumerate}
+\item[\underline{Step 1}.] For the endogenous grid methods, define grid points on $(a_{j+1},h_{j},\theta_0) \in \tilde{\mathcal{A}}\otimes\tilde{\mathcal{H}}\otimes\tilde{\Theta}_0$ for $j\leq J_R$ and on $a_{j+1} \in \tilde{\mathcal{A}}$ for $j > J_R$, where a set $\tilde{X}$ denotes a set of $N_x$ discretized points of a convex set $X$, $\tilde{X}=\{x_{min}=x_{0},x_{1},...,x_{N_x-1},x_{N_x}=x_{max}\}$. For the exogenous grid methods, define grid points on $(a_{j},h_{j},\theta_0) \in \tilde{\mathcal{A}}\otimes\tilde{\mathcal{H}}\otimes\tilde{\Theta}_0$ for $j\leq J_R$ and on $a_{j} \in \tilde{\mathcal{A}}$ for $j > J_R$.
+\item[\underline{Step 2}.] [\textit{EXGM}] At $j=J$, $a_{J+1}=0$ for any given $a_{J}$. Therefore, for each grid point $a_{J}\in \tilde{\mathcal{A}}$, we obtain 
+\begin{align*}
+&c^*_J = (y_{ss} + (1+r(1-\tau_{k})) a_J) / (1+\tau_c)\\
+&W^a_{J}(a_{J}) = u'(c^*_J)(1+r(1-\tau_{k}))/ (1+\tau_c)
+\end{align*}
+\end{enumerate}
+}
+\end{frame}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\frametitle{Computational Algorithm: Household's Problem}
+{\footnotesize
+\begin{enumerate}
+\item[\underline{Step 3}.] [\textit{ENGM}\&\textit{EXGM}] At $J_R+1\leq j<J$, we find $(\hat{c}_j, \hat{a}_j)$ for each grid point $a_{j+1}\in \tilde{\mathcal{A}}$:
+\begin{align*}
+u'(\hat{c}_j) &= (1+\tau_c)\beta W^a_{j+1}(a_{j+1})\\
+\hat{a}_j &= ((1+\tau_c) \hat{c}_j + a_{j+1} - y_{ss})/R(1-\tau_{k}).
+\end{align*}
+and using a derived policy function $g_j(\hat{a}_j) = a_{j+1}$, interpolate a policy function $g_j(a_j) = a^*_{j+1}$ with respect to each exogenous grid point, $a_j\in \tilde{\mathcal{A}}$. Finally, if $a^*_{j+1}\geq -\underline{a}$, proceed to the $j-1$ problem. Otherwise, find $a^*_{j+1}$ and $c^*_j$ for the particular exogenous states $a_j\in\tilde{\mathcal{A}}\backslash  \tilde{\mathcal{A}}_{\{a_j:a^*_{j+1}\geq -\underline{a}\}}$ using a nonlinear solution method.
+\item[\underline{Step 4}.] At $j=J_R$, it is optimal to invest no time in human capital, $s_j = 0$.\footnote{\sf From $j=J_R$ to $j=J_R+1$, there is a transformation of the state space from three dimensions to one dimension. That is, the household problem at $j=J_R$ becomes
+\begin{align*}
+V_j(a_j,h_j;\theta_0) &= \max_{c_j,a_{j+1},s_j} u(c_j,1-n_j) +  \beta W_{j+1}(a_{j+1}) \\
+\text{s.t.} \quad &(1+\tau_c) c_j + a_{j+1} = \tilde{y}_j - T(\tilde{y}_j)  + (1+r(1-\tau_{k}))a_j \\
+&\tilde{y}_j =w h_j n_j (1-s_j) - 0.5\tau_{ss}\min(w h_j n_j(1-s_j),\bar{y}) \\
+&a_j \geq -\underline{a}.
+\end{align*}
+As the stock of human capital accumulated up until $J_R$ and initial productivity becomes irrelevant to the benefits after retirement, it is trivial that $s_{J_R} = 0$. Therefore, the problem is identical to that in Step 3 except for the envelope condition for human capital $V^h_j$.
+} Otherwise, the computational algorithm follows as in step 5.
+\end{enumerate}
+}
+\end{frame}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\frametitle{Computational Algorithm: Household's Problem}
+{\footnotesize
+\begin{enumerate}
+\item[\underline{Step 5}.] [\textit{ENGM}\&\textit{EXGM}] At $j<J_R$, for each grid point $(a_{j+1},h_{j},\theta_0) \in  \tilde{\mathcal{X}}$, we first numerically solve nonlinear equations for $\hat{n}_j$ and $\hat{s}_j$. An optimal pair of $(\hat{n}_j,\hat{s}_j)$ with $V^a_{j+1}$ and $V^h_{j+1}$ determines Lagrange multipliers $\hat{\lambda}^c_j$ and $\hat{\lambda}^h_j$.
+
+Then, we find $\hat{c}_j$. With three policy functions $g^n_j(\hat{a}_j,h_j,\theta_0) = \hat{n}_j$, $g^s_j(\hat{a}_j,h_j,\theta_0) = \hat{s}_j$, and $g^a_j(\hat{a}_j,h_j,\theta_0) = a_{j+1}$, interpolate new policy functions $g^n_j(a_j,h_j,\theta_0) = n^*_j$, $g^s_j(a_j,h_j,\theta_0) = s^*_j$, and $g^a_j(a_j,h_j,\theta_0) = a^*_{j+1}$ for each exogenous grid point, $(a_j,h_{j},\theta_0) \in  \tilde{\mathcal{X}}$. Finally, if $a^*_{j+1}\geq -\underline{a}$, proceed to the $j-1$ problem. Otherwise, find $n^*_j$ and $s^*_j$ for the particular exogenous states $(a_j,h_j,\theta_0)\in\tilde{\mathcal{X}}\backslash  \tilde{\mathcal{X}}_{\{(a_j,h_j,\theta_0):a^*_{j+1}\geq -\underline{a}\}}$ using a nonlinear solution method. Given the solutions $(n^*_j,s^*_j,a^*_{j+1})$, we compute envelope conditions $V^a_{j}$ and $V^h_{j}$ for each $(a_j,h_j,\theta_0)\in\tilde{\mathcal{X}}$.
+\end{enumerate}
+}
+\end{frame}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\frametitle{Computational Algorithm: Constrained Efficiency}
+{\tiny
+\begin{align*}
+&\frac{u_c(c_j,1-n_j)}{1+\tau_c} = \beta \mathbb{E} V^a_{j+1} = \lambda^c_j\\ 
+&V^a_j = \lambda^c_j (1+F_K (1-\tau_{k})) + \Delta_k \\
+&\Delta_k = \sum_{i=0}^{J} \mu_i \int_{\chi} \lambda^c_i F_{KK} K \left[ \frac{(1-\tau_{k})a_i}{K} - \frac{h_i n_i (1-s_i)}{L}(1-0.5 \tau_{ss} \mathbb{I}_{\tilde{y}_i\leq \bar{y}}) (1-T'(\tilde{y}_i))\right] d\Psi_i  \\
+&\lambda^c_j F_L h_j n_j (1-T'(\tilde{y}_j))(1-0.5 \tau_{ss} \mathbb{I}_{y_j\leq \bar{y}}) + h_j n_j \Delta_{h} = \beta \mathbb{E} V^h_{j+1} \exp(\varepsilon_{j+1})\frac{\partial H_j}{\partial s_j} \\ 
+&\Delta_{h} = \sum_{i=0}^{J_R} \mu_i \int_{\chi} \lambda^c_i F_{KL}K \left[  \frac{(1-\tau_k)a_i}{K} - \frac{h_i n_i(1-s_i)}{L} (1-0.5 \tau_{ss} \mathbb{I}_{\tilde{y}_i\leq \bar{y}})(1-T'(\tilde{y}_i)) \right] d\Psi_i \\
+&V^h_j = \lambda^c_j F_L n_j (1-s_j) (1-T'(\tilde{y}_j))(1-0.5 \tau_{ss} \mathbb{I}_{\tilde{y}_j\leq \bar{y}}) + n_j (1-s_j)\Delta_{h} + \beta\mathbb{E}  V^h_{j+1} \exp(\varepsilon_{j+1})\frac{\partial H_j}{\partial h_j}  \\
+&u_n(c_j,1-n_j) = \lambda^c_j F_L h_j (1-s_j) (1-0.5 \tau_{ss} \mathbb{I}_{\tilde{y}_j\leq \bar{y}}) (1-T'(\tilde{y}_j)) + \lambda^h_j \exp(\varepsilon_{j+1}) \frac{\partial H}{\partial n_j} \\
+&\quad\quad\quad\quad\quad\quad\quad\quad + h_j (1-s_j) \Delta_h
+\end{align*}
+}
+\end{frame}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\frametitle{Computational Algorithm: Constrained Efficiency}
+\begin{itemize}
+\item[Step 1.] Guess an initial distribution $\hat{\Psi} = \{\hat{\Psi}_1,\hat{\Psi}_2,\ldots,\hat{\Psi}_{J}\}$. A good initial guess could be a competitive equilibrium distribution.
+\item[Step 2.] Compute the value functions and policy functions as in the competitive equilibrium and simulate the distribution $\tilde{\Psi}$.
+\item[Step 3.] If $|\hat{\Psi} - \tilde{\Psi}|<\delta_{\Psi}$, then stop. Otherwise, repeat the process with the new distribution $\tilde{\Psi}$.
+\end{itemize}
+\end{frame}
+
+
+
+
+
+
+
+\end{document}
+
+

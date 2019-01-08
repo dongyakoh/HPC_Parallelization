@@ -1,0 +1,131 @@
+\providecommand{\noopsort}[1]{}
+\begin{thebibliography}{}
+
+\bibitem[Aldrich et~al.,
+  2011]{Aldrich-Fernandez-Villaverde-Gallant-Rubio-Ramirez-11}
+Aldrich, E.~M., Fern{\'{a}}ndez-Villaverde, J., {Ronald Gallant}, A., and
+  Rubio-Ram{\'{i}}rez, J.~F. (2011).
+\newblock {Tapping the Supercomputer under Your Desk: Solving Dynamic
+  Equilibrium Models with Graphics Processors}.
+\newblock {\em Journal of Economic Dynamics and Control}, 35(3):386--393.
+
+\bibitem[Aruoba et~al., 2006]{Aruoba-Fernandez-Villaverde-Rubio-Ramirez-06}
+Aruoba, S.~B., Fern{\'{a}}ndez-Villaverde, J., and Rubio-Ram{\'{i}}rez, J.~F.
+  (2006).
+\newblock {Comparing Solution Methods for Dynamic Equilibrium Economies}.
+\newblock {\em Journal of Economic Dynamics and Control}, 30:2477--2508.
+
+\bibitem[Barillas and Fern{\'{a}}ndez-Villaverde,
+  2007]{Barillas-Fernandez-Villaverde-07}
+Barillas, F. and Fern{\'{a}}ndez-Villaverde, J. (2007).
+\newblock {A Generalization of the Endogenous Grid Method}.
+\newblock {\em Journal of Economic Dynamics and Control}, 31:2698--2712.
+
+\bibitem[Brumm and Scheidegger, 2017]{Brumm-Scheidegger-17}
+Brumm, J. and Scheidegger, S. (2017).
+\newblock {Using Adaptive Sparse Grids to Solve High-Dimensional Dynamic
+  Models}.
+\newblock {\em Econometrica}, 85(5):1575--1612.
+
+\bibitem[Carroll, 2005]{Carroll-05}
+Carroll, C.~D. (2005).
+\newblock {The Method of Endogenous Gridpoints for Solving Dynamic Stochastic
+  Optimization}.
+\newblock {\em NBER Technical Working Paper 309}.
+
+\bibitem[Creel and Goffe, 2008]{Creel-Goffe-08}
+Creel, M. and Goffe, W.~L. (2008).
+\newblock {Multi-core CPUs, Clusters, and Grid Computing: A Tutorial}.
+\newblock {\em Computational Economics}, 32(4):353.
+
+\bibitem[Dziubinski and Grassi, 2014]{Dziubinski-Grassi-14}
+Dziubinski, M.~P. and Grassi, S. (2014).
+\newblock Heterogeneous computing in economics: A simplified approach.
+\newblock {\em Computational Economics}, 43(4):485--495.
+
+\bibitem[Fern{\'{a}}ndez-Villaverde and Valencia,
+  2018]{Fernandez-Villaverde-Valencia-18}
+Fern{\'{a}}ndez-Villaverde, J. and Valencia, D.~Z. (2018).
+\newblock {A Practical Guide to Parallelization in Economics}.
+\newblock Working Paper.
+
+\bibitem[Haan and Marcet, 1990]{Den-Haan-Marcet-90}
+Haan, W. J.~D. and Marcet, A. (1990).
+\newblock {Solving the Stochastic Growth Model by Parameterizing Expectations}.
+\newblock {\em Journal of Business {\&} Economic Statistics}, 8(1):31--34.
+
+\bibitem[Hager and Wellein, 2011]{Hager-Wellein-11}
+Hager, G. and Wellein, G. (2011).
+\newblock {\em {Introduction to High Performance Computing for Scientists and
+  Engineers}}.
+\newblock CRC Press, Florida.
+
+\bibitem[Judd, 1992]{Judd-92}
+Judd, K.~L. (1992).
+\newblock {Projection Methods for Solving Aggregate Growth Models}.
+\newblock {\em Journal of Economic Theory}, 58:410--452.
+
+\bibitem[Judd and Guu, 1993]{Judd-Guu-93}
+Judd, K.~L. and Guu, S.-M. (1993).
+\newblock {\em Perturbation Solution Methods for Economic Growth Models}, pages
+  80--103.
+\newblock Springer, New York, NY.
+
+\bibitem[Judd et~al., 2010]{Judd-Maliar-Maliar-10}
+Judd, K.~L., Maliar, L., and Maliar, S. (2010).
+\newblock {A Cluster-Grid Production Method: Solving Problems with High
+  Dimensionality}.
+\newblock {\em NBER Working Paper 15965}.
+
+\bibitem[Judd et~al., 2011]{Judd-Maliar-Maliar-11}
+Judd, K.~L., Maliar, L., and Maliar, S. (2011).
+\newblock {Numerically Stable and Accurate Stochastic Simulation Approaches for
+  Solving Dynamic Economic Models}.
+\newblock {\em Quantitative Economics}, 2:173--210.
+
+\bibitem[Judd et~al., 2012]{Judd-Maliar-Maliar-12}
+Judd, K.~L., Maliar, L., and Maliar, S. (2012).
+\newblock {Merging Simulation and Projection Approaches to Solve
+  High-Dimensional Problems}.
+\newblock {\em NBER Working Paper 18501}.
+
+\bibitem[Judd et~al., 2014]{Judd-Maliar-Maliar-Valero-14}
+Judd, K.~L., Maliar, L., Maliar, S., and Valero, R. (2014).
+\newblock {Smolyak Method for Solving Dynamic Economic Models: Lagrange
+  Interpolation, Anisotropic Grid and Adaptive Domain}.
+\newblock {\em Journal of Economic Dynamics and Control}, 44:92--123.
+
+\bibitem[Krueger and Kubler, 2004]{Krueger-Kubler-04}
+Krueger, D. and Kubler, F. (2004).
+\newblock {Computing Equilibrium in OLG Models with Stochastic Production}.
+\newblock {\em Journal of Economic Dynamics and Control}, 28(7):1411--1436.
+
+\bibitem[Maliar, 2015]{Maliar-15}
+Maliar, L. (2015).
+\newblock {Assessing Gains from Parallel Computation on a Supercomputer}.
+\newblock {\em Economics Bulletic}, 35(1):159--167.
+
+\bibitem[Maliar and Maliar, 2013]{Maliar-Maliar-13b}
+Maliar, L. and Maliar, S. (2013).
+\newblock {Envelope Condition Method versus Endogenous Grid Method for Solving
+  Dynamic Programming Problems}.
+\newblock {\em Economics Letters}, 120(2):262--266.
+
+\bibitem[Maliar and Maliar, 2014]{Maliar-Maliar-14}
+Maliar, L. and Maliar, S. (2014).
+\newblock {\em {Chapter 7 - Numerical Methods for Large-Scale Dynamic Economic
+  Models}}, volume~3.
+
+\bibitem[Marcet, 1988]{Marcet-88}
+Marcet, A. (1988).
+\newblock {Solving Non-linear Stochastic Models by Parameterizing
+  Expectations}.
+\newblock Working Paper, Carnegie Mellon University.
+
+\bibitem[Pinho and de~Carvalho~Junior, 2014]{Pinho-de-Carvalho-Junior-14}
+Pinho, E.~G. and de~Carvalho~Junior, F.~H. (2014).
+\newblock {An Object-Oriented Parallel Programming Language for
+  Distributed-Memory Parallel Computing Platforms}.
+\newblock {\em Science of Computer Programming}, 80:65--90.
+
+\end{thebibliography}
