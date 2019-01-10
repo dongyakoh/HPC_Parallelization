@@ -1,5 +1,0 @@
-\beamer@sectionintoc {1}{Introduction}{2}{0}{1}
-\beamer@sectionintoc {2}{Model 1}{10}{0}{2}
-\beamer@sectionintoc {3}{Model 2}{19}{0}{3}
-\beamer@sectionintoc {4}{Model 3}{24}{0}{4}
-\beamer@sectionintoc {5}{Conclusion}{30}{0}{5}
