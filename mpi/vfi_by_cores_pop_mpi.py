@@ -218,9 +218,8 @@ def run_vfi_opt(comm):
     '''
     This function runs the main process.
     ''' 
-    comm.Barrier()
     
-    s0          = time.time()
+    s0          = MPI.Wtime()
     f0_sum      = 0
     
     #------------------------------------------#
@@ -259,14 +258,14 @@ def run_vfi_opt(comm):
 #    print(" ")
     run_time    = np.zeros(hh.T)    
     for age in reversed(range(hh.T)):
-        s2  = time.time()
+        s2  = MPI.Wtime()
         
         # EMPTY BIN FOR VALUE FUNCTION AND POLICY FUNCITONS
         results = np.zeros((hh.na*hh.ne,3))
             
         # NO GRID SEARCH AT AGE T
         if(age == hh.T-1):
-            if comm.rank==0:               
+            if comm.rank==0:
                 for ind in range(hh.na*hh.ne):
                     ia = ind // hh.ne
                     ie = ind % hh.ne
@@ -278,13 +277,15 @@ def run_vfi_opt(comm):
         
         # GRID SEARCH AT AGE < T
         else:
+            
+            # Broadcast the next period's value function
             if comm.rank==0:
                 V1 = hh.V[age+1,:,:]
             else:
-                V1 = np.empty((hh.na,hh.ne),dtype=np.float64)
-                
+                V1 = np.empty((hh.na,hh.ne),dtype=np.float64)                
             comm.Bcast(V1,root=0)
-            
+
+            # Split the for loop by workers
             lb  = int((comm.rank+0)*np.ceil((hh.na*hh.ne)/comm.size))
             ub  = int((comm.rank+1)*np.ceil((hh.na*hh.ne)/comm.size))
             if hh.na*hh.ne < ub:
@@ -292,11 +293,13 @@ def run_vfi_opt(comm):
             leng = ub - lb
             Vp  = np.empty((int(leng),3))
             it  = 0
-            
+
+            # Run the for loops by workers
             for ind in range(lb,ub):
                 Vp[it,:] = vfi_opt(age,hh.ne,hh.agrid,hh.egrid,hh.amin,hh.amax,V1,hh.P,hh.r,hh.w,hh.ssigma,hh.bbeta,ind)
                 it += 1
-            
+
+            # Gather the computed value function by each worker            
             comm.Gather(Vp,results,root=0)
         
         # UPDATE VALUE FUNCTION AND POLICY FUNCTIONS
@@ -308,18 +311,19 @@ def run_vfi_opt(comm):
                 hh.set_c0(age,ia,ie,results[ind][1])
                 hh.set_a1(age,ia,ie,results[ind][2])
         
-            f2 = time.time() - s2
-            run_time[age] = f2
-            f0_sum  += f2
+        f2 = MPI.Wtime() - s2
+        run_time[age] = f2
+        f0_sum  += f2
+        if comm.rank==0:
             sys.stdout.write("Age: %d. Time: %f seconds. \n" % (age+1, round(f2, 4)))    
 
         comm.Barrier()
 
-    if comm.rank==0:
 
-        # TOTAL RUNTIME
-        f0 = time.time() - s0
-        run_time = np.insert(run_time, 0, [f0, f0_sum])
+    # TOTAL RUNTIME
+    f0 = MPI.Wtime() - s0
+    run_time = np.insert(run_time, 0, [f0, f0_sum])
+    if comm.rank==0:
         sys.stdout.write("TOTAL ELAPSED TIME:  %f seconds. \n" % round(f0_sum, 4))
         
         
@@ -332,17 +336,19 @@ if __name__ == "__main__":
 
     # Run time memory
     T        = 10    
-    nrun     = 10
+    nrun     = 3
     
     # Iterate on the number of cores
     # Store the results as JSON data
     data = []
     for num_runs in range(nrun):
         
+        if comm.rank==0:
+            # Print out to a console window
+            sys.stdout.write("####### %d times run with %d cores #######\n" % (num_runs+1, comm.size) )
+
         results = run_vfi_opt(comm)
                 
-        comm.Barrier()
-
         # Store the total run time and initialization in a JSON data
         data.append({
                 'core': int(comm.size),
@@ -357,9 +363,9 @@ if __name__ == "__main__":
                 'runtime': results[1]
         })
             
-        # Print out to a console window
-        print("####### ", num_runs+1, " times run with ",comm.size, " cores #######\n")
-        print ("Total Elapsed Time: ", round(results[0], 4), " seconds.")
+        comm.Barrier()
+        
+#            sys.stdout.write ("Total Elapsed Time: %f seconds." % round(results[0], 4))
         
 #        for age in range(T):
 #            data.append({
@@ -372,16 +378,16 @@ if __name__ == "__main__":
 #        
 #        print(" ")    
     
-        
-    file_name = "runtime_vfi_by_cores_pop_mpi_" + str(comm.size) + ".txt"
-    # Write the data to a output file
-    with open(file_name,"w+") as outfile:
-        json.dump(data, outfile)
+    if comm.rank==0:
+        file_name = "runtime_vfi_by_cores_pop_mpi_" + str(comm.size) + ".txt"
+        # Write the data to a output file
+        with open(file_name,"w+") as outfile:
+            json.dump(data, outfile)
     
     
-    # Retrieve the results from the output file
-    with open(file_name) as json_data:
-        d = json.load(json_data)
-        pprint(d)
-    for ik in range(len(d)):
-        print(d[ik]['core'],d[ik]['run'],d[ik]['age'],d[ik]['runtime'])
+        # Retrieve the results from the output file
+        with open(file_name) as json_data:
+            d = json.load(json_data)
+            pprint(d)
+        for ik in range(len(d)):
+            sys.stdout.write("%d, %d, %d, %f \n" % (d[ik]['core'],d[ik]['run'],d[ik]['age'],d[ik]['runtime']))
