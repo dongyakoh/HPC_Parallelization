@@ -93,8 +93,8 @@ fig, ax = plt.subplots(figsize=(7, 5))
 # Total runtime
 #plt.fill_between(list_cores, tp_n_min, tp_n_max, facecolor='lightgreen')
 #plt.scatter(list_cores, tp_n_med, color='darkgreen',label="Parallelized Tasks",marker='o')
-p1 = plt.plot(list_cores[1:], p_n0_med_norm[1:], '-o',label="Variables")
-p2 = plt.plot(list_cores[1:], p_n1_med_norm[1:], '-^',label="Object")
+p1 = plt.plot(list_cores[1:], p_n1_med_norm[1:], '-o',label="Object")
+p2 = plt.plot(list_cores[1:], p_n0_med_norm[1:], '-^',label="Variables")
 
 
 # Axes labels
@@ -103,7 +103,7 @@ plt.ylabel('% of Total Serial Runtime', color = 'black', fontsize=fs)
 
 # Axes ticks
 plt.xticks(list_cores[1:],color = 'black',fontsize = fs, rotation=90)
-plt.yticks(np.arange(0.25,2.26,0.25),color = 'black',fontsize = fs)
+plt.yticks(np.arange(0,2.51,0.25),color = 'black',fontsize = fs)
 
 # Background grid
 plt.grid()
@@ -111,7 +111,8 @@ ax.xaxis.grid(linestyle=':')
 ax.yaxis.grid(linestyle=':')
 
 # Legend
+plt.tight_layout()
 plt.legend(loc='upper left', fontsize = fs)
-plt.savefig(fig_name, dpi = 300)
+plt.savefig(fig_name, dpi = 300, bbox_inches = "tight")
 plt.show()
 

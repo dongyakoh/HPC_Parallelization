@@ -15,7 +15,7 @@ from scipy.optimize import bisect
 
 
 
-oop_flag    = 1     # 0: oop, 1: pop
+oop_flag    = 0     # 0: oop, 1: pop
 q_flag      = 2     # 0: med16core, 1: onenode16core, 2: mem768GB32core
 
 if oop_flag is 0:
@@ -38,7 +38,6 @@ elif q_flag is 3:
     
     
 file_name = "runtime_vfi_by_cores" + oop_var + q_var + ".txt"
-fig_name = "vfi_by_cores" + oop_var + "_1_" + str(max_core) + ".png"
 
 list_cores      = np.arange(1,max_core+1,1)
 num_list_cores  = len(list_cores)
@@ -71,9 +70,17 @@ p_n         = np.zeros(tp_n.shape)
 p_n_max     = np.zeros(tp_n_max.shape)
 p_n_min     = np.zeros(tp_n_min.shape)
 p_n_med     = np.zeros(tp_n_med.shape)
-dp_n_f      = np.zeros(tp_n.shape)
-dp_n_b      = np.zeros(tp_n.shape)
-dp_n_c      = np.zeros(tp_n.shape)
+
+sp_n         = np.zeros(tp_n.shape)
+sp_n_max     = np.zeros(tp_n_max.shape)
+sp_n_min     = np.zeros(tp_n_min.shape)
+sp_n_med     = np.zeros(tp_n_med.shape)
+
+ef_n         = np.zeros(tp_n.shape)
+ef_n_max     = np.zeros(tp_n_max.shape)
+ef_n_min     = np.zeros(tp_n_min.shape)
+ef_n_med     = np.zeros(tp_n_med.shape)
+
 
 # Parallelization overhead
 for ncores in list_cores:
@@ -81,14 +88,18 @@ for ncores in list_cores:
     p_n_max[ncores-1]     = tp_n_max[ncores-1] - tp_n_max[0]/ncores
     p_n_min[ncores-1]     = tp_n_min[ncores-1] - tp_n_min[0]/ncores
     p_n_med[ncores-1]     = tp_n_med[ncores-1] - tp_n_med[0]/ncores
-        
-# Discrete approximation of P'(n) = P(n) - P(n-1) or P'(n) = P(n+1) - P(n)
-for ncores in list_cores:
-    if ncores > 1:
-        dp_n_f[ncores-1,:]      = p_n[ncores-1,:] - p_n[ncores-2,:]
-    if ncores < list_cores[num_list_cores-1]:
-        dp_n_b[ncores-1,:]    = p_n[ncores,:] - p_n[ncores-1,:]
 
+    sp_n[ncores-1,:]       = tp_n[0,:]/tp_n[ncores-1,:]
+    sp_n_max[ncores-1]     = tp_n_max[0]/tp_n_max[ncores-1]
+    sp_n_min[ncores-1]     = tp_n_min[0]/tp_n_min[ncores-1]
+    sp_n_med[ncores-1]     = tp_n_med[0]/tp_n_med[ncores-1]
+
+    ef_n[ncores-1,:]       = sp_n[ncores-1,:]/ncores
+    ef_n_max[ncores-1]     = sp_n_max[ncores-1]/ncores
+    ef_n_min[ncores-1]     = sp_n_min[ncores-1]/ncores
+    ef_n_med[ncores-1]     = sp_n_med[ncores-1]/ncores
+
+        
 
 tp_n_med_norm = 100*tp_n_med/tp_n_med[0]
 p_n_med_norm = 100*p_n_med/tp_n_med[0]
@@ -97,39 +108,53 @@ p_n_med_norm = 100*p_n_med/tp_n_med[0]
 # Plot
 ####################################
 
-fs  = 14
+fs  = 12
 wid = 0.8
 
-fig, ax = plt.subplots(figsize=(7, 5))
-
-
-# Total runtime
-#plt.fill_between(list_cores, tp_n_min, tp_n_max, facecolor='lightgreen')
-#plt.scatter(list_cores, tp_n_med, color='darkgreen',label="Parallelized Tasks",marker='o')
-p1 = plt.fill_between(list_cores, 0, tp_n_med_norm, facecolor='green',label="Parallelized Tasks")
-
-# Parallelization overhead
-#plt.fill_between(list_cores, p_n_min, p_n_max, facecolor='pink')
-#plt.scatter(list_cores, p_n_med, color='red',label="Parallelization Overhead",marker='s')
-p2 = plt.fill_between(list_cores, 0, p_n_med_norm, facecolor='darkorange',label="Parallelization Overhead")
-
-#p3 = ax.axvspan(n_b_opt, n_f_opt, facecolor='0.9', alpha=0.5, edgecolor='0.1',label="Optimal Number of Cores")
-
-# Axes labels
-plt.xlabel('Number of Cores', color = 'black', fontsize=fs)
+fig, ax0 = plt.subplots(figsize=(7, 5))
+p1 = plt.plot(list_cores[1:], p_n_med_norm[1:], '-o')
+plt.xlabel('# of Cores', color = 'black', fontsize=fs)
 plt.ylabel('% of Total Serial Runtime', color = 'black', fontsize=fs)
-
-# Axes ticks
-plt.xticks(list_cores,color = 'black',fontsize = fs, rotation=90)
-plt.yticks(np.arange(0,110,10),color = 'black',fontsize = fs)
-
-# Background grid
+plt.xticks(list_cores[1:],color = 'black',fontsize = fs, rotation=90)
+plt.yticks(np.arange(0,2.51,0.25),color = 'black',fontsize = fs)
 plt.grid()
-ax.xaxis.grid(linestyle=':')
-ax.yaxis.grid(linestyle=':')
-
-# Legend
-plt.legend(loc='upper right', fontsize = fs)
-plt.savefig(fig_name, dpi = 300)
+ax0.xaxis.grid(linestyle=':')
+ax0.yaxis.grid(linestyle=':')
+plt.tight_layout()
+fig_name = "po_by_cores" + oop_var + "_1_" + str(max_core) + ".png"
+plt.savefig(fig_name, dpi = 300, bbox_inches = "tight")
 plt.show()
 
+
+fig, ax1 = plt.subplots(figsize=(7, 5))
+p1 = plt.plot(list_cores[1:], sp_n_med[1:], '-o')
+p2 = plt.plot(list_cores[1:], list_cores[1:], '--', color='gray')
+plt.xlabel('# of Cores', color = 'black', fontsize=fs)
+plt.ylabel('Relative Performance', color = 'black', fontsize=fs)
+plt.xticks(list_cores[1:],color = 'black',fontsize = fs, rotation=90)
+plt.yticks(np.arange(2,33,2),color = 'black',fontsize = fs)
+plt.grid()
+ax1.xaxis.grid(linestyle=':')
+ax1.yaxis.grid(linestyle=':')
+plt.tight_layout()
+plt.text(30, 31, "45$^{\circ}$",{'color': 'k', 'fontsize': 12, 'ha': 'center', 'va': 'center'})
+#plt.legend(loc='lower right', fontsize = fs)
+fig_name = "speedup_by_cores" + oop_var + "_1_" + str(max_core) + ".png"
+plt.savefig(fig_name, dpi = 300, bbox_inches = "tight")
+plt.show()
+
+"""
+fig, ax2 = plt.subplots(figsize=(7, 5))
+p1 = plt.plot(list_cores[1:], ef_n_med[1:], '-o')
+plt.xlabel('Number of Cores', color = 'black', fontsize=fs)
+plt.ylabel('Efficiency', color = 'black', fontsize=fs)
+plt.xticks(list_cores[1:],color = 'black',fontsize = fs, rotation=90)
+plt.yticks(np.arange(0.5,1.1,0.1),color = 'black',fontsize = fs)
+plt.grid()
+ax2.xaxis.grid(linestyle=':')
+ax2.yaxis.grid(linestyle=':')
+plt.tight_layout()
+fig_name = "efficiency_by_cores" + oop_var + "_1_" + str(max_core) + ".png"
+plt.savefig(fig_name, dpi = 300, bbox_inches = "tight")
+plt.show()
+"""
